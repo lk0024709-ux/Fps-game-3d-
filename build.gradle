@@ -1,0 +1,21 @@
+// Root build file. All versions pinned - never use "+" or "latest".
+buildscript {
+    ext {
+        gdxVersion = '1.12.1'
+        gdxGltfVersion = '2.2.0'
+        javaVersion = JavaVersion.VERSION_17
+    }
+}
+
+plugins {
+    id 'com.android.application' version '8.5.0' apply false
+}
+
+allprojects {
+    group = 'com.brfps'
+    version = '0.1.0'
+}
+
+tasks.register('cleanAll', Delete) {
+    delete rootProject.layout.buildDirectory
+}
