@@ -156,7 +156,7 @@ use Free Fire's own assets.
 
 | Milestone | Scope | Status |
 |---|---|---|
-| M1 | Project skeleton + CI green | in progress |
+| M1 | Project skeleton + CI green | ✅ done — CI green, `brfps-debug-apk` (8.6 MB) produced |
 | M2 | 3D arena + first-person camera | not started |
 | M3 | Player movement + touch controls | not started |
 | M4 | Weapons + shooting | not started |
