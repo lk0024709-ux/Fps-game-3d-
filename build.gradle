@@ -2,7 +2,7 @@
 buildscript {
     ext {
         gdxVersion = '1.12.1'
-        gdxGltfVersion = '2.2.0'
+        gdxGltfVersion = '2.2.1'
         javaVersion = JavaVersion.VERSION_17
     }
 }

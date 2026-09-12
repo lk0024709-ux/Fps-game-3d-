@@ -15,7 +15,7 @@ Offline only: 1 human player versus 9 AI bots, shrinking safe zone, ground loot.
 | Build | Gradle 8.7, Android Gradle Plugin 8.5.0 |
 | Android | minSdk 24, targetSdk 34, compileSdk 34 |
 | 3D physics | gdx-bullet 1.12.1 |
-| Model loading | gdx-gltf 2.2.0 + libGDX g3d (`.g3dj`) |
+| Model loading | gdx-gltf 2.2.1 + libGDX g3d (`.g3dj`) |
 | CI | GitHub Actions |
 
 All dependency versions are pinned — no `+`, no `latest`.
