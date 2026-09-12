@@ -16,8 +16,27 @@ public final class Constants {
     public static final float FAR_PLANE = 300f;
     public static final float MAX_PIXEL_RATIO = 1.5f;
 
-    // --- Arena ---
-    public static final float ARENA_SIZE = 120f;
+    // --- Map ---
+    public static final float MAP_SIZE = 300f;
+
+    // --- Map debug visuals (toggle off in later milestones) ---
+    public static final boolean DEBUG_SHOW_ZONE_MARKERS = true; // set false after M5
+    public static final boolean DEBUG_SHOW_SPAWN_MARKERS = true; // remove after M4
+    public static final boolean DEBUG_SHOW_CHUNK_GRID = true; // preview of M2e chunking
+    public static final int TERRAIN_SEGMENTS = 40; // raise in M2e when heightfield lands
+    public static final float ROAD_Y_OFFSET = 0.05f;
+    public static final float RIVER_Y_OFFSET = 0.03f;
+    public static final float SPAWN_MARK_Y_OFFSET = 0.04f;
+    public static final float GRID_Y_OFFSET = 0.08f;
+    public static final float MARKER_POST_HEIGHT = 2f;
+    public static final float MARKER_POST_SIDE = 0.25f;
+    public static final float WATER_ALPHA = 0.7f;
+
+    // --- M2a debug orbit camera + screenshot ---
+    public static final float ORBIT_RADIUS = 160f;
+    public static final float ORBIT_HEIGHT = 120f;
+    public static final float ORBIT_SPEED = 12f; // degrees per second
+    public static final float SCREENSHOT_DELAY = 5f; // seconds into GameScreen
 
     // --- Player ---
     public static final float EYE_HEIGHT = 1.6f;

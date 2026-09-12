@@ -35,6 +35,12 @@ public class MainMenuScreen implements Screen {
     public void render(float delta) {
         pulse += delta;
 
+        if (Gdx.input.justTouched()) {
+            dispose();
+            game.setScreen(new GameScreen(game));
+            return;
+        }
+
         Gdx.gl.glClearColor(0.04f, 0.05f, 0.07f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
@@ -52,7 +58,7 @@ public class MainMenuScreen implements Screen {
         game.getAssets().font().getData().setScale(1.1f);
         float blink = 0.55f + 0.45f * (float) Math.abs(Math.sin(pulse * 2.0));
         game.getAssets().font().setColor(1f, 1f, 1f, blink);
-        layout.setText(game.getAssets().font(), "M1 - project skeleton ready");
+        layout.setText(game.getAssets().font(), "Tap to inspect the island (M2a)");
         game.getAssets().font().draw(batch, layout,
                 (viewport.getWorldWidth() - layout.width) * 0.5f,
                 viewport.getWorldHeight() * 0.42f);
