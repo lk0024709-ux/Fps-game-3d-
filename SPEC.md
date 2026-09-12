@@ -133,6 +133,11 @@ Everything below is currently a procedural placeholder (box / colored quad /
 silent stub). Replace with CC0 low-poly art (Kenney, Quaternius, Meshy) — never
 use Free Fire's own assets.
 
+**Maps (`assets/maps/`)** — no assets needed: maps are procedural JSON
+(`index.json` + `*.layout`); geometry is generated vertex-colored by `Arena`
+with no textures or models. The river is a translucent strip until M2e carves
+the channel; the bridge arrives in M2d.
+
 **Models (`assets/models/`)** — all missing, `ModelBuilder.createBox` fallback:
 `arms_pistol.g3dj`, `arms_rifle.g3dj`, `arms_smg.g3dj`, `arms_shotgun.g3dj`,
 `arms_sniper.g3dj`, `enemy_body.g3dj`, `arena.g3dj`, `loot_crate.g3dj`,
@@ -157,12 +162,79 @@ use Free Fire's own assets.
 | Milestone | Scope | Status |
 |---|---|---|
 | M1 | Project skeleton + CI green | ✅ done — CI green, `brfps-debug-apk` (8.6 MB) produced |
-| M2 | 3D arena + first-person camera | not started |
-| M3 | Player movement + touch controls | not started |
-| M4 | Weapons + shooting | not started |
-| M5 | Loot system + inventory | not started |
-| M6 | Enemy bots + combat | not started |
-| M7 | Battle royale mechanics | not started |
-| M8 | UI polish + lobby | not started |
-| M9 | Optimization + release prep | not started |
-| M10 | Release signing (on request only) | not started |
+| M2a | Island terrain + zone markers + roads + JSON map layout | ✅ done |
+| M2b | Town + village buildings | not started |
+| M2c | Industrial + military base | not started |
+| M2d | Props + vehicles + trees (incl. bridge over river) | not started |
+| M2e | Chunk loading + LOD + frustum culling | not started |
+| M3a | Virtual joystick + touch-look area | not started |
+| M3b | Player movement physics | not started |
+| M3c | Camera control + gravity + collisions | not started |
+| M4 | Landing system (plane, parachute, drop, land) | not started |
+| M5a | Crosshair + fire button + ammo counter | not started |
+| M5b | Hitscan raycast + impact decals + damage | not started |
+| M5c | Muzzle flash + recoil + screen shake | not started |
+| M6a | Loot spawns + pickup system | not started |
+| M6b | Inventory UI + weapon switch | not started |
+| M6c | Save system (Preferences) + PlayerProfile | not started |
+| M7a | Bot spawn + patrol behavior | not started |
+| M7b | Bot combat AI (cover, strafe, reload, retreat+heal) | not started |
+| M7c | Rank-based bot profiles + difficulty scaling | not started |
+| M7d | Advanced tactics (flank, grenade, squads) | not started |
+| M8 | Safe zone + BR mechanics (shrink, damage, counter, result) | not started |
+| M9a | Main menu + lobby + settings screen | not started |
+| M9b | Rank badge + XP bar + RP progress | not started |
+| M9c | Kill feed + damage numbers + post-match screen | not started |
+| M9d | Rank-up animation + level-up rewards | not started |
+| M10 | Graphics quality tiers (auto-detect + settings override) | not started |
+| M11 | Optimization pass (30 FPS floor on SD 660-class) | not started |
+| M12 | Multi-map support (desert map via JSON only) | not started |
+| M13 | Release signing + Play Store prep (on request only) | not started |
+| M14+ | Real PvP — separate project, explicitly out of scope | not started |
+
+---
+
+## Multi-Map System (since M2a)
+
+- Building kit is fixed (8 buildings + 7 props) and reused across all maps.
+- Every map is pure data: `assets/maps/index.json` lists the maps,
+  `assets/maps/<id>.layout` describes each one. Adding a new map must not
+  require code changes.
+- `MapRegistry` (`world/`) parses the index; `MapLayout` (`world/`) parses a
+  layout file. Unknown JSON fields are ignored (forward-compatible).
+
+### Layout JSON schema (center origin: (0,0) is the map center, range ±size/2)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id`, `name`, `version` | string/string/int | identity |
+| `size` | float | full map side length in meters (island: 300) |
+| `terrain` | string | theme label (`tropical`, later `desert`, `snow`) |
+| `water` | bool | render the surrounding water plane |
+| `waterLevel` | float | water plane height |
+| `waterMargin` | float | how far water extends past the terrain edge |
+| `beachWidth` | float | sandy ring inside the terrain edge |
+| `zones[]` | array | `id`, `name`, `x`, `z`, `width`, `depth`, `ground` |
+| `roads[]` | array | `from: [x,z]`, `to: [x,z]`, `width` |
+| `rivers[]` | array | `points: [[x,z]...]` polyline, `width`, `depth` (channel carved in M2e; bridge in M2d) |
+| `buildings[]` | array | `type`, `x`, `z`, `rotation` (filled from M2b) |
+| `props[]` | array | `type`, `x`, `z`, `rotation`, `scale` (filled from M2d) |
+| `spawnPoints[]` | array | `x`, `z`, `zone` (zone tag is advisory) |
+| `lootSpawns[]` | array | `x`, `z` (used from M6a) |
+
+`zones[].ground` is a fixed enum mapped to colors in `Arena.GROUND_COLORS`
+(map-specific data lives in Arena, not Constants): `grass`, `dry_grass`,
+`dirt`, `concrete`, `asphalt`. Unknown ground types fall back to grass with an
+error log — a new map can never crash the game.
+
+### Map performance rules
+
+- Draw calls budget < 80; visible triangles budget < 80,000.
+- M2a baseline: 40×40 terrain segments (~3.2k tris total, 7 draw calls).
+  Raise segmentation in M2e together with the heightfield, never on flat maps.
+- Debug visuals toggle in `Constants.java`: `DEBUG_SHOW_ZONE_MARKERS`
+  (set false after M5), `DEBUG_SHOW_SPAWN_MARKERS` (remove after M4),
+  `DEBUG_SHOW_CHUNK_GRID` (preview of the M2e 10×10 × 30 m chunking).
+- M2a verification on-device: `GameScreen` shows `FPS | DC | Tri` top-right and
+  saves `debug/screenshot.png` (app-internal storage, no permissions) 5 s after
+  entering. Pull it with: `adb shell run-as com.brfps cat debug/screenshot.png > shot.png`

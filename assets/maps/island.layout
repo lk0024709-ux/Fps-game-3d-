@@ -1,0 +1,42 @@
+{
+  "id": "island",
+  "name": "Island",
+  "version": 1,
+  "size": 300,
+  "terrain": "tropical",
+  "water": true,
+  "waterLevel": -0.2,
+  "waterMargin": 60,
+  "beachWidth": 6,
+  "zones": [
+    { "id": "town",       "name": "Town",          "x": 75,   "z": 0,    "width": 80, "depth": 80, "ground": "concrete" },
+    { "id": "village",    "name": "Village",       "x": 0,    "z": 95,   "width": 60, "depth": 60, "ground": "dry_grass" },
+    { "id": "industrial", "name": "Industrial",    "x": 0,    "z": -95,  "width": 70, "depth": 70, "ground": "asphalt" },
+    { "id": "military",   "name": "Military Base", "x": -100, "z": 0,    "width": 50, "depth": 50, "ground": "dirt" },
+    { "id": "fields",     "name": "Open Fields",   "x": -75,  "z": -80,  "width": 90, "depth": 90, "ground": "grass" }
+  ],
+  "roads": [
+    { "from": [75, 0],   "to": [0, 95],   "width": 6 },
+    { "from": [75, 0],   "to": [0, -95],  "width": 6 },
+    { "from": [0, -95],  "to": [-100, 0], "width": 5 },
+    { "from": [-100, 0], "to": [0, 95],   "width": 5 }
+  ],
+  "rivers": [
+    { "points": [[-50, -30], [0, -20], [60, -10], [120, 0]], "width": 12, "depth": -1.5 }
+  ],
+  "buildings": [],
+  "props": [],
+  "spawnPoints": [
+    { "x": 75,   "z": 0,    "zone": "town" },
+    { "x": 0,    "z": 95,   "zone": "village" },
+    { "x": 0,    "z": -95,  "zone": "industrial" },
+    { "x": -100, "z": 0,    "zone": "military" },
+    { "x": -75,  "z": -80,  "zone": "fields" },
+    { "x": 100,  "z": 100,  "zone": "fields" },
+    { "x": 100,  "z": -100, "zone": "fields" },
+    { "x": -110, "z": -110, "zone": "fields" },
+    { "x": 30,   "z": 40,   "zone": "fields" },
+    { "x": -40,  "z": 60,   "zone": "fields" }
+  ],
+  "lootSpawns": []
+}
