@@ -140,7 +140,7 @@ public final class Constants {
     // Weapon panel: right side, below the perf/debug lines. Width is a fraction of the
     // screen width, heights are fractions of the short side, top offset too (R46).
     public static final float WEAPON_PANEL_WIDTH = 0.18f;
-    public static final float WEAPON_PANEL_TOP = 0.13f; // below the top edge (A3 lowers this for the feed)
+    public static final float WEAPON_PANEL_TOP = 0.25f; // below the top edge (under the kill feed)
     public static final float WEAPON_BOX1_HEIGHT = 0.105f; // big box: the active weapon
     public static final float WEAPON_BOX_SMALL_HEIGHT = 0.07f; // boxes 2-3: name + ammo
     public static final float WEAPON_BOX_FIST_HEIGHT = 0.055f; // box 4: name only
@@ -155,6 +155,18 @@ public final class Constants {
     public static final int STARTING_MEDKITS = 3;
     // Spawn clearance: a spawn whose resolve push is shorter than this is open ground.
     public static final float SPAWN_CLEARANCE = 0.6f; // meters of allowed push-out
+
+    // --- M34 (master) HUD phase A3: minimap, compass, kill feed (all R46) ---
+    public static final float MINIMAP_SIZE = 0.26f; // diameter, fraction of short side
+    public static final float MINIMAP_ZOOM = 3.0f; // tap toggles whole-map / zoomed
+    public static final int MINIMAP_DOTS = 48; // safe-zone ring dots
+    public static final float COMPASS_WIDTH = 0.40f; // fraction of screen width
+    public static final float COMPASS_HEIGHT = 0.055f; // fraction of short side
+    public static final float COMPASS_RANGE_DEGREES = 120f; // visible window (+/-60)
+    public static final int KILL_FEED_COUNT = 4; // entries kept
+    public static final float KILL_FEED_TIME = 5.0f; // seconds each entry stays
+    public static final float KILL_FEED_LINE_HEIGHT = 0.035f; // fraction of short side
+    public static final float KILL_FEED_TOP = 0.09f; // below the top edge, x short side
 
     // --- M4 (master) shooting: hitscan, bullet holes, crosshair, ammo HUD ---
     // Weapon stats themselves live in weapons/WeaponType.java (R7) — damage, fire

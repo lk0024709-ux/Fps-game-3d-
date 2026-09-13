@@ -7,8 +7,8 @@ import com.badlogic.gdx.Input;
  * Desktop keyboard + mouse controls: WASD/arrows to move, a held right mouse button
  * drag to aim, left mouse button to fire, R to reload, Space to jump, Shift to
  * sprint, Ctrl or C to crouch, X to sit, Z to go prone, 1-4 to pick a weapon box,
- * Q to cycle weapons, H to use a medkit. The right button aims (not the left) so
- * the trigger hand is free, matching the editor camera.
+ * Q to cycle weapons, H to use a medkit, M to zoom the minimap. The right button
+ * aims (not the left) so the trigger hand is free, matching the editor camera.
  */
 public class DesktopInputHandler {
 
@@ -43,6 +43,7 @@ public class DesktopInputHandler {
         out.reload = Gdx.input.isKeyJustPressed(Input.Keys.R);
         out.cycleWeapon = Gdx.input.isKeyJustPressed(Input.Keys.Q);
         out.mediPressed = Gdx.input.isKeyJustPressed(Input.Keys.H);
+        out.mapTapped = Gdx.input.isKeyJustPressed(Input.Keys.M);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
             out.weaponSlot = 0;
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {

@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.brfps.ui.HudBars;
+import com.brfps.ui.MinimapView;
 import com.brfps.ui.TouchButton;
 import com.brfps.ui.WeaponPanel;
 import com.brfps.util.Constants;
@@ -12,10 +13,10 @@ import com.brfps.util.Constants;
  * HUD-phase-A2 touch widgets, split out of {@link TouchInputHandler} so both files
  * stay inside the 300-line limit (R13): the RELOAD button (right row), the SCOPE
  * button (drawn greyed, never claimed — scopes arrive with master M22), the PACK
- * (cycle weapon) and MEDI buttons (left, below the HP bars), and taps on the four
- * weapon boxes (hit-tested with {@link WeaponPanel#hitSlot}, so areas and pictures
- * share one set of rectangles). Queued taps are momentary: {@link #writeState} copies
- * them into the {@link InputState} and clears them, so a tap fires exactly one frame.
+ * (cycle weapon) and MEDI buttons (left, below the HP bars), taps on the four
+ * weapon boxes (hit-tested with {@link WeaponPanel#hitSlot}) and minimap taps (zoom
+ * toggle, HUD phase A3). Queued taps are momentary: {@link #writeState} copies them
+ * into the {@link InputState} and clears them, so a tap fires exactly one frame.
  */
 public class HudButtons {
 
@@ -24,6 +25,8 @@ public class HudButtons {
     public static final int RELOAD = 1;
     public static final int PACK = 2;
     public static final int MEDI = 3;
+    /** Minimap disc tapped: toggles the zoom (HUD phase A3). */
+    public static final int MAP = 4;
     /** Weapon-box taps: SLOT_0 + slot index. */
     public static final int SLOT_0 = 10;
 
@@ -32,6 +35,7 @@ public class HudButtons {
     private boolean reloadQueued;
     private boolean cycleQueued;
     private boolean mediQueued;
+    private boolean mapQueued;
     private int slotQueued = -1;
     private int heldBits;
 
@@ -95,6 +99,9 @@ public class HudButtons {
         if (TouchButton.inside(x, y, mediLeft(width, height), leftTop, side)) {
             return MEDI;
         }
+        if (MinimapView.hit(x, y, width, height)) {
+            return MAP;
+        }
         int slot = WeaponPanel.hitSlot(x, y, width, height, activeSlot);
         if (slot >= 0) {
             return SLOT_0 + slot;
@@ -110,6 +117,8 @@ public class HudButtons {
             cycleQueued = true;
         } else if (id == MEDI) {
             mediQueued = true;
+        } else if (id == MAP) {
+            mapQueued = true;
         } else if (id >= SLOT_0) {
             slotQueued = id - SLOT_0;
         }
@@ -131,10 +140,12 @@ public class HudButtons {
         out.reload = reloadQueued;
         out.cycleWeapon = cycleQueued;
         out.mediPressed = mediQueued;
+        out.mapTapped = mapQueued;
         out.weaponSlot = slotQueued;
         reloadQueued = false;
         cycleQueued = false;
         mediQueued = false;
+        mapQueued = false;
         slotQueued = -1;
     }
 

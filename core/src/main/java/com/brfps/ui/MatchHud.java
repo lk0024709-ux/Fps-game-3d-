@@ -10,9 +10,10 @@ import com.brfps.util.Constants;
  * The match HUD, extracted from GameScreen so that screen stays inside the 300-line
  * limit (R13): crosshair (with the master M5 recoil bloom), muzzle flash, hit marker,
  * HP/armor/stamina bars, the four weapon boxes, ammo counter, stance, performance
- * line and — in debug builds — the position, collider, recoil and shooting readout
- * plus a control hint. Each string is rebuilt only when a value it shows actually
- * changes, so the render loop allocates nothing (R6, R30).
+ * line, compass + alive counter, minimap and kill feed — and in debug builds the
+ * position, collider, recoil and shooting readout plus a control hint, stacked above
+ * the stance. Each string is rebuilt only when a value it shows actually changes, so
+ * the render loop allocates nothing (R6, R30).
  */
 public class MatchHud {
 
@@ -26,6 +27,7 @@ public class MatchHud {
     private final Crosshair crosshair = new Crosshair();
     private final HudBars bars = new HudBars();
     private final WeaponPanel panel = new WeaponPanel();
+    private final CompassBar compass = new CompassBar();
     private final GlyphLayout layout = new GlyphLayout();
     private final StringBuilder stanceBuilder = new StringBuilder(16);
     private final StringBuilder ammoBuilder = new StringBuilder(48);
@@ -54,13 +56,13 @@ public class MatchHud {
     private int lastRecoilTenths = -1;
 
     /**
-     * Draws the whole HUD; call between batch.begin() and batch.end(). The shot widgets
-     * are owned by the screen (they are fired from the same event that kicks the recoil)
-     * and only drawn here, so all screen-space feedback stays in one batch (R28).
+     * Draws the whole HUD; call between batch.begin() and batch.end(). The shot widgets,
+     * the kill feed and the minimap are owned by the screen and only drawn here, so all
+     * screen-space feedback stays in one batch (R28).
      */
     public void render(SpriteBatch batch, Assets assets, HudData data,
-                       MuzzleFlash flash, HitMarker marker,
-                       float worldWidth, float worldHeight) {
+                       MuzzleFlash flash, HitMarker marker, KillFeed feed,
+                       MinimapView minimap, float worldWidth, float worldHeight) {
         BitmapFont font = assets.font();
         font.getData().setScale(1f);
 
@@ -71,11 +73,18 @@ public class MatchHud {
             marker.render(batch, assets.whiteRegion(), worldWidth, worldHeight);
             bars.render(batch, assets.white(), font, data, worldWidth, worldHeight);
             panel.render(batch, assets.white(), font, data, worldWidth, worldHeight);
+            compass.render(batch, assets.white(), font, data, worldWidth, worldHeight);
+            if (minimap != null) {
+                minimap.render(batch, assets.white(), assets.whiteRegion(),
+                        assets.circle(), data, worldWidth, worldHeight);
+            }
+            feed.render(batch, font, worldWidth, worldHeight);
         }
 
         font.setColor(1f, 1f, 1f, 0.9f);
         layout.setText(font, buildStanceString(data));
-        font.draw(batch, layout, 12f, 12f + layout.height);
+        float rowTop = 12f + layout.height;
+        font.draw(batch, layout, 12f, rowTop);
         font.setColor(0.05f, 0.08f, 0.12f, 1f);
         layout.setText(font, buildPerfString(data));
         font.draw(batch, layout, worldWidth - layout.width - 12f, worldHeight - 12f);
@@ -88,11 +97,13 @@ public class MatchHud {
 
         if (Constants.DEBUG_TOOLS_ENABLED && !data.loadFailed) {
             font.getData().setScale(1f);
-            font.setColor(0.05f, 0.08f, 0.12f, 1f);
+            font.setColor(1f, 1f, 1f, 0.85f);
             layout.setText(font, buildDebugString(data));
-            font.draw(batch, layout, worldWidth - layout.width - 12f, worldHeight - 32f);
+            rowTop += 6f + layout.height;
+            font.draw(batch, layout, 12f, rowTop);
             layout.setText(font, data.helpText);
-            font.draw(batch, layout, 12f, worldHeight - 32f);
+            rowTop += 6f + layout.height;
+            font.draw(batch, layout, 12f, rowTop);
         }
 
         if (data.loadFailed) {

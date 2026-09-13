@@ -66,7 +66,7 @@ public class InputManager {
     /** One-line control hint for the HUD. */
     public String helpText() {
         return touchDevice
-                ? "stick: move (mid = jog, full/SPR = sprint) | drag: aim | FIRE JUMP CRCH SPR SIT SLP RLD PACK MEDI | tap boxes: switch"
-                : "WASD move | RMB drag: aim | LMB fire | R reload | 1-4/Q switch | H medi | SPACE jump | SHIFT sprint | C/X/Z crouch/sit/prone";
+                ? "stick: move (mid = jog, full/SPR = sprint) | drag: aim | FIRE JUMP CRCH SPR SIT SLP RLD PACK MEDI | tap boxes: switch, map: zoom"
+                : "WASD move | RMB drag: aim | LMB fire | R reload | 1-4/Q switch | H medi | M map | SPACE jump | SHIFT sprint | C/X/Z crouch/sit/prone";
     }
 }

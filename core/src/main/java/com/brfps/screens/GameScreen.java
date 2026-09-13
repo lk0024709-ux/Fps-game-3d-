@@ -16,7 +16,9 @@ import com.brfps.player.PlayerInventory;
 import com.brfps.ui.HitMarker;
 import com.brfps.ui.HudData;
 import com.brfps.ui.HudDataBinder;
+import com.brfps.ui.KillFeed;
 import com.brfps.ui.MatchHud;
+import com.brfps.ui.MinimapView;
 import com.brfps.ui.MuzzleFlash;
 import com.brfps.util.Constants;
 import com.brfps.weapons.WeaponController;
@@ -29,9 +31,8 @@ import com.brfps.world.MapRegistry;
 import com.brfps.world.SafeZone;
 
 /**
- * The playable first-person screen (master M3-M5 + M34 A1-A2): fixed effect order
- * input -&gt; taps -&gt; look -&gt; move -&gt; recoil -&gt; fov -&gt; shake -&gt; apply
- * -&gt; weapons. Feel, HUD and wiring live in WeaponFeel/MatchHud/HudDataBinder (R13).
+ * The playable match screen (M3-M5 + M34 A1-A3): input -&gt; taps -&gt; look -&gt;
+ * move -&gt; recoil -&gt; fov -&gt; shake -&gt; apply -&gt; weapons (R13: thin screen).
  */
 public class GameScreen implements Screen {
 
@@ -42,6 +43,7 @@ public class GameScreen implements Screen {
     private final WeaponFeel feel = new WeaponFeel();
     private final MuzzleFlash muzzleFlash = new MuzzleFlash();
     private final HitMarker hitMarker = new HitMarker();
+    private final KillFeed killFeed = new KillFeed();
     private final InputManager input = new InputManager();
     private final InputState inputState = new InputState();
     private final MatchHud hud = new MatchHud();
@@ -55,6 +57,7 @@ public class GameScreen implements Screen {
     private ImpactDecals decals;
     private WeaponController weapons;
     private HudDataBinder binder;
+    private MinimapView minimap;
     private final boolean loadFailed;
 
     public GameScreen(BrFpsGame game) {
@@ -78,6 +81,7 @@ public class GameScreen implements Screen {
         loadFailed = false;
 
         arena = new Arena(layout);
+        minimap = new MinimapView(layout.buildings, layout.size);
         player = new Player();
         view = new FirstPersonCamera(camera);
         BuildingCollider collider = new BuildingCollider(layout.buildings, layout.size);
@@ -93,9 +97,7 @@ public class GameScreen implements Screen {
     }
 
     @Override
-    public void show() {
-        Gdx.input.setCatchBackKey(true);
-    }
+    public void show() { Gdx.input.setCatchBackKey(true); }
 
     @Override
     public void render(float delta) {
@@ -131,10 +133,14 @@ public class GameScreen implements Screen {
         view.look(inputState.lookDX, inputState.lookDY, input.lookSensitivity());
         movement.update(delta, inputState, view.getYaw()); // base yaw: before any offset
         feel.update(delta, inputState.fire); // recoil recovers first, then shake decays
-        zone.update(delta); // the ring shrinks on schedule; damage is master M11
+        zone.update(delta);
         view.updateFov(delta, movement.isSprinting());
         muzzleFlash.update(delta);
         hitMarker.update(delta);
+        killFeed.update(delta);
+        if (inputState.mapTapped) {
+            minimap.toggleZoom();
+        }
         view.apply(player, feel.getShake().offsetX(),
                 feel.getRecoil().pitchOffset() + feel.getShake().offsetY(),
                 feel.getShake().roll());
@@ -162,7 +168,7 @@ public class GameScreen implements Screen {
         input.render(batch, game.getAssets().circle(), game.getAssets().font(),
                 worldWidth, worldHeight, hudData.medCount);
         hud.render(batch, game.getAssets(), hudData, muzzleFlash, hitMarker,
-                worldWidth, worldHeight);
+                killFeed, minimap, worldWidth, worldHeight);
         batch.end();
     }
 
@@ -174,16 +180,11 @@ public class GameScreen implements Screen {
     }
 
     @Override
-    public void pause() {
-    }
-
+    public void pause() { }
     @Override
-    public void resume() {
-    }
-
+    public void resume() { }
     @Override
-    public void hide() {
-    }
+    public void hide() { }
 
     @Override
     public void dispose() {

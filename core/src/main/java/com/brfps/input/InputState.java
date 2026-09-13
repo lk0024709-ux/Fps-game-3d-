@@ -51,6 +51,9 @@ public class InputState {
     /** Use one medkit this frame (MEDI button or H key). */
     public boolean mediPressed;
 
+    /** Minimap tapped this frame (touch disc or M key): toggles the zoom. */
+    public boolean mapTapped;
+
     /** Clears every field; called at the start of each frame. */
     public void reset() {
         moveX = 0f;
@@ -68,5 +71,6 @@ public class InputState {
         weaponSlot = -1;
         cycleWeapon = false;
         mediPressed = false;
+        mapTapped = false;
     }
 }
