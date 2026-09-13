@@ -2,7 +2,7 @@ package com.brfps.weapons;
 
 /**
  * Runtime state of one carried weapon: ammo, cooldown and reload timer.
- * Purely logical - rendering and raycasting live in WeaponManager (M4).
+ * Purely logical: raycasting and the HUD live in WeaponController (master M4).
  */
 public class Weapon {
 
@@ -61,6 +61,14 @@ public class Weapon {
     public void refill() {
         ammoInMagazine = type.magazineSize();
         reserveAmmo = type.magazineSize() * 3;
+    }
+
+    /** Reload progress 0..1 for the HUD; 1 when no reload is running. */
+    public float getReloadProgress() {
+        if (reloadRemaining <= 0f) {
+            return 1f;
+        }
+        return 1f - reloadRemaining / type.reloadTime();
     }
 
     public void update(float delta) {

@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.ObjectMap;
@@ -97,6 +98,11 @@ public class Arena {
         draw(waterMesh, GL20.GL_TRIANGLES);
         Gdx.gl.glDepthMask(true);
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    /** The world shader, still bound after render(): decals reuse it (Mesh.render never binds). */
+    public ShaderProgram worldShader() {
+        return flatShader.program();
     }
 
     /** Draw calls issued during the last render() (for the debug HUD). */

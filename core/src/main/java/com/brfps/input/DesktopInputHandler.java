@@ -5,8 +5,9 @@ import com.badlogic.gdx.Input;
 
 /**
  * Desktop keyboard + mouse controls: WASD/arrows to move, a held right mouse button
- * drag to aim (the left button stays free for shooting from master M4, and this
- * matches the editor camera), Space to jump, Shift to sprint, Ctrl or C to crouch.
+ * drag to aim, left mouse button to fire, R to reload, Space to jump, Shift to
+ * sprint, Ctrl or C to crouch. The right button aims (not the left) so the trigger
+ * hand is free, matching the editor camera.
  */
 public class DesktopInputHandler {
 
@@ -34,8 +35,10 @@ public class DesktopInputHandler {
         out.crouch = Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)
                 || Gdx.input.isKeyPressed(Input.Keys.C);
         out.jump = Gdx.input.isKeyPressed(Input.Keys.SPACE);
+        out.fire = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+        out.reload = Gdx.input.isKeyJustPressed(Input.Keys.R);
 
-        // Mouse look only while the right button is held, so the cursor stays usable.
+        // Mouse look only while the right button is held; the left button is the trigger.
         if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
             out.lookDX = Gdx.input.getDeltaX();
             out.lookDY = Gdx.input.getDeltaY();

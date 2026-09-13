@@ -112,6 +112,24 @@ public final class Constants {
     public static final float TOUCH_MARGIN = 0.03f;
     public static final int CIRCLE_TEXTURE_SIZE = 64; // generated disc for touch widgets
 
+    // --- M4 (master) shooting: hitscan, bullet holes, crosshair, ammo HUD ---
+    // Weapon stats themselves live in weapons/WeaponType.java (R7) — damage, fire
+    // interval, magazine, range, reload time, recoil and the projectile flag. The
+    // starting reserve is three magazines, computed in weapons/Weapon. Only the decal
+    // pool and the screen furniture are tuned here.
+    public static final float DECAL_SIZE = 0.14f; // bullet hole quad, meters
+    public static final float DECAL_OFFSET = 0.02f; // off the surface, avoids z-fighting
+    public static final float FIRE_BUTTON_SIZE = 0.18f; // trigger is bigger than JUMP/CRCH
+    public static final float HUD_AMMO_SCALE = 1.6f;
+    public static final float HUD_AMMO_Y = 0.05f; // bottom-centre, fraction of height
+    // Crosshair sizes are fractions of min(screenWidth, screenHeight) — R46.
+    public static final float CROSSHAIR_GAP = 0.006f;
+    public static final float CROSSHAIR_LENGTH = 0.012f;
+    public static final float CROSSHAIR_THICKNESS = 0.0022f;
+    public static final float CROSSHAIR_DOT_SCALE = 2f; // dot diameter in thicknesses
+    public static final float CROSSHAIR_ALPHA = 0.85f;
+    public static final float CROSSHAIR_RELOAD_ALPHA = 0.35f;
+
     // --- Main menu (master M3 wiring; scene2d UI arrives with master M44) ---
     public static final float MENU_BUTTON_HEIGHT = 0.10f; // fraction of the short screen side
     public static final float MENU_PLAY_Y = 0.50f; // bottom edge, fraction of height (y up)

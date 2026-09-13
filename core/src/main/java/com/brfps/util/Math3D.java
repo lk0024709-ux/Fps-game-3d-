@@ -9,12 +9,19 @@ public final class Math3D {
     private Math3D() {
     }
 
-    /** Writes a unit direction vector for the given yaw/pitch (degrees) into out. */
+    /**
+     * Writes a unit look direction for yaw/pitch in degrees into out, in this project's
+     * convention: yaw 0 looks along +X, yaw 90 along +Z, positive pitch is up. Both
+     * cameras go through here, and so must every AI aim calculation (R7) — one formula,
+     * no second convention.
+     */
     public static Vector3 direction(float yawDeg, float pitchDeg, Vector3 out) {
-        float yaw = yawDeg * MathUtils.degreesToRadians;
-        float pitch = pitchDeg * MathUtils.degreesToRadians;
-        float cosPitch = MathUtils.cos(pitch);
-        out.set(MathUtils.sin(yaw) * cosPitch, MathUtils.sin(pitch), -MathUtils.cos(yaw) * cosPitch);
+        float cosPitch = MathUtils.cosDeg(pitchDeg);
+        out.set(MathUtils.cosDeg(yawDeg) * cosPitch, MathUtils.sinDeg(pitchDeg),
+                MathUtils.sinDeg(yawDeg) * cosPitch);
+        if (out.x == 0f && out.y == 0f && out.z == 0f) {
+            out.set(1f, 0f, 0f); // degenerate: fall back to +X rather than a zero vector
+        }
         return out.nor();
     }
 

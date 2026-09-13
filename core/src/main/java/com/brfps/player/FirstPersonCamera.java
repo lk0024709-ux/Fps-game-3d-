@@ -1,9 +1,9 @@
 package com.brfps.player;
 
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.brfps.util.Constants;
+import com.brfps.util.Math3D;
 
 /**
  * First-person view: yaw/pitch look plus the stance-dependent eye height, applied to
@@ -47,16 +47,7 @@ public class FirstPersonCamera {
     public void apply(Player player) {
         Vector3 feet = player.getPosition();
         camera.position.set(feet.x, feet.y + player.eyeHeight(), feet.z);
-
-        float cosPitch = MathUtils.cosDeg(pitch);
-        direction.set(MathUtils.cosDeg(yaw) * cosPitch,
-                MathUtils.sinDeg(pitch),
-                MathUtils.sinDeg(yaw) * cosPitch);
-        if (direction.x == 0f && direction.y == 0f && direction.z == 0f) {
-            direction.set(1f, 0f, 0f);
-        } else {
-            direction.nor();
-        }
+        Math3D.direction(yaw, pitch, direction);
         camera.direction.set(direction);
         camera.up.set(0f, 1f, 0f);
         camera.update();

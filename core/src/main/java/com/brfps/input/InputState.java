@@ -27,6 +27,12 @@ public class InputState {
     /** Sprint requested (Shift, or the stick pushed to full deflection). */
     public boolean sprint;
 
+    /** Trigger held this frame (FIRE button or left mouse button). */
+    public boolean fire;
+
+    /** Reload requested this frame (R key; touch reloads automatically when empty). */
+    public boolean reload;
+
     /** Clears every field; called at the start of each frame. */
     public void reset() {
         moveX = 0f;
@@ -36,5 +42,7 @@ public class InputState {
         jump = false;
         crouch = false;
         sprint = false;
+        fire = false;
+        reload = false;
     }
 }

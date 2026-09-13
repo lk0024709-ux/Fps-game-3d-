@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.brfps.util.Constants;
+import com.brfps.util.Math3D;
 
 /**
  * Free-fly editor camera: WASD/arrows + Q/E with Shift on desktop, a left-half drag
@@ -283,13 +284,6 @@ public class EditorCamera {
 
     /** Unit look direction for the current yaw/pitch (yaw 0 = +X, yaw 90 = +Z). */
     private void direction(Vector3 out) {
-        float cosPitch = MathUtils.cosDeg(pitch);
-        out.set(MathUtils.cosDeg(yaw) * cosPitch, MathUtils.sinDeg(pitch),
-                MathUtils.sinDeg(yaw) * cosPitch);
-        if (out.x == 0f && out.y == 0f && out.z == 0f) {
-            out.set(1f, 0f, 0f);
-        } else {
-            out.nor();
-        }
+        Math3D.direction(yaw, pitch, out);
     }
 }

@@ -52,7 +52,7 @@ public class InputManager {
     /** One-line control hint for the HUD. */
     public String helpText() {
         return touchDevice
-                ? "stick: move (full = sprint) | drag right: aim | JUMP | CRCH"
-                : "WASD move | RMB drag: aim | SPACE jump | SHIFT sprint | CTRL crouch";
+                ? "stick: move (full = sprint) | drag right: aim | FIRE | JUMP | CRCH"
+                : "WASD move | RMB drag: aim | LMB fire | R reload | SPACE jump | SHIFT sprint";
     }
 }
