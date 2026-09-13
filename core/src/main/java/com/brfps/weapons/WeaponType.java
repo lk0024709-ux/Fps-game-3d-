@@ -65,6 +65,15 @@ public enum WeaponType {
         return recoil;
     }
 
+    /**
+     * Inventory slot category: the pistol is PISTOL, everything else carried today is
+     * PRIMARY. MG/DMR map to PRIMARY and blades to MELEE when those types land
+     * (master M22/M23); FIST stays the empty-melee fallback, never a picked-up type.
+     */
+    public WeaponCategory category() {
+        return this == PISTOL ? WeaponCategory.PISTOL : WeaponCategory.PRIMARY;
+    }
+
     /** First-person arms model for this weapon. */
     public String armsModelPath() {
         return "models/arms_" + name().toLowerCase() + ".g3dj";

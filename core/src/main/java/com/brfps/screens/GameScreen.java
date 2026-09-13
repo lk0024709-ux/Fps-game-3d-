@@ -36,7 +36,7 @@ import com.brfps.world.SpawnPoint;
 /**
  * The playable first-person screen (master M3-M5, repo M3a-M3c / M5a-M5c): loads the
  * map, drops the player on a spawn point, then runs the frame in the fixed effect order
- * <b>look -> movement -> recoil -> shake -> camera apply -> weapons</b>, so movement
+ * <b>look -> movement -> recoil -> fov -> shake -> camera apply -> weapons</b>, so movement
  * always sees the base yaw and a shot can never push the player around. Weapon feel
  * lives in {@code weapons.WeaponFeel} and the HUD in {@code ui.MatchHud} to keep this
  * class inside the 300-line limit (R13). Bots and the match loop arrive later.
@@ -153,6 +153,7 @@ public class GameScreen implements Screen {
         view.look(inputState.lookDX, inputState.lookDY, input.lookSensitivity());
         movement.update(delta, inputState, view.getYaw()); // base yaw: before any offset
         feel.update(delta, inputState.fire); // recoil recovers first, then shake decays
+        view.updateFov(delta, movement.isSprinting());
         muzzleFlash.update(delta);
         hitMarker.update(delta);
         view.apply(player, feel.getShake().offsetX(),
@@ -182,6 +183,7 @@ public class GameScreen implements Screen {
         float worldWidth = viewport.getWorldWidth();
         float worldHeight = viewport.getWorldHeight();
         fillHudData();
+        input.setSprinting(!loadFailed && movement.isSprinting());
         batch.begin();
         input.render(batch, game.getAssets().circle(), game.getAssets().font(),
                 worldWidth, worldHeight);
@@ -206,6 +208,10 @@ public class GameScreen implements Screen {
         hudData.health = Math.round(stats.getHealth());
         hudData.armor = Math.round(stats.getArmor());
         hudData.crouching = player.isCrouching();
+        hudData.sitting = player.isSitting();
+        hudData.prone = player.isProne();
+        hudData.stamina = player.getStamina().getStamina();
+        hudData.sprinting = movement.isSprinting();
         hudData.onGround = player.isOnGround();
         hudData.positionX = feet.x;
         hudData.positionY = feet.y;

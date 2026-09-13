@@ -4,16 +4,17 @@ import com.badlogic.gdx.math.Vector3;
 import com.brfps.util.Constants;
 
 /**
- * The local player's body: feet position, vertical velocity, stance, and health/armor.
- * Movement rules live in MovementController, the view in FirstPersonCamera.
+ * The local player's body: feet position, vertical velocity, stance, health/armor and
+ * sprint stamina. Movement rules live in MovementController, the view in FirstPersonCamera.
  */
 public class Player {
 
-    /** Standing or crouched; changes eye height and speed. */
-    public enum Stance { STAND, CROUCH }
+    /** Standing, crouched, sitting or prone; changes eye height and speed. */
+    public enum Stance { STAND, CROUCH, SIT, PRONE }
 
     private final Vector3 position = new Vector3();
     private final PlayerStats stats = new PlayerStats();
+    private final StaminaState stamina = new StaminaState();
     private Stance stance = Stance.STAND;
     private float verticalVelocity;
     private boolean onGround = true;
@@ -25,6 +26,7 @@ public class Player {
         onGround = true;
         stance = Stance.STAND;
         stats.reset();
+        stamina.reset();
     }
 
     /** Feet position, in world units; y is the ground contact point. */
@@ -34,6 +36,10 @@ public class Player {
 
     public PlayerStats getStats() {
         return stats;
+    }
+
+    public StaminaState getStamina() {
+        return stamina;
     }
 
     public Stance getStance() {
@@ -46,6 +52,14 @@ public class Player {
 
     public boolean isCrouching() {
         return stance == Stance.CROUCH;
+    }
+
+    public boolean isSitting() {
+        return stance == Stance.SIT;
+    }
+
+    public boolean isProne() {
+        return stance == Stance.PRONE;
     }
 
     public float getVerticalVelocity() {
@@ -64,8 +78,17 @@ public class Player {
         this.onGround = onGround;
     }
 
-    /** Eye height for the current stance (SPEC: 1.6 m standing, 1.0 m crouched). */
+    /** Eye height for the current stance (1.6 stand, 1.0 crouch, 0.8 sit, 0.5 prone). */
     public float eyeHeight() {
-        return stance == Stance.CROUCH ? Constants.CROUCH_EYE_HEIGHT : Constants.EYE_HEIGHT;
+        if (stance == Stance.CROUCH) {
+            return Constants.CROUCH_EYE_HEIGHT;
+        }
+        if (stance == Stance.SIT) {
+            return Constants.SIT_EYE_HEIGHT;
+        }
+        if (stance == Stance.PRONE) {
+            return Constants.PRONE_EYE_HEIGHT;
+        }
+        return Constants.EYE_HEIGHT;
     }
 }

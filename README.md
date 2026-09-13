@@ -73,8 +73,9 @@ temple plinth, sprint, crouch and jump.
 | Look / aim | hold **right mouse button** + drag | drag anywhere on the right half |
 | **Fire** | hold **left mouse button** | hold **FIRE** (large, bottom-right) |
 | Reload | `R` | automatic when the magazine empties |
-| Sprint | hold `Shift` | push the stick all the way out |
-| Crouch | `Ctrl` or `C` | **CRCH** button |
+| Sprint | hold `Shift` (drains stamina) | stick full pull **or SPR** button (tap = toggle, drains stamina) |
+| Crouch | hold `Ctrl`/`C` | **CRCH** button (tap = toggle) |
+| Sit / prone | hold `X` / `Z` | **SIT** / **SLP** buttons (tap = toggle) |
 | Jump | `Space` | **JUMP** button |
 | Back to menu | `Esc` / `Back` | `Back` |
 

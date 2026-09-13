@@ -7,10 +7,11 @@ import com.brfps.util.Constants;
 import com.brfps.world.BuildingCollider;
 
 /**
- * Turns an InputState into player motion: stance, walk/sprint/crouch speed, jump,
- * gravity, ground snapping (plinths count as walkable ground), wall push-out and map
- * bounds. Fixed-timestep style with a clamped delta so a stalled frame cannot tunnel
- * a player through a wall; allocation-free (R6).
+ * Turns an InputState into player motion: stance, walk/jog/sprint/crouch/prone/sit
+ * speed, jump, gravity, ground snapping (plinths count as walkable ground), wall
+ * push-out and map bounds. Sprinting drains the stamina pool and an empty pool forces
+ * the jog until it regens past the relock level. Fixed-timestep style with a clamped
+ * delta so a stalled frame cannot tunnel a player through a wall; allocation-free (R6).
  */
 public class MovementController {
 
@@ -20,6 +21,7 @@ public class MovementController {
     private final float halfExtent;
     private final Vector3 forward = new Vector3();
     private final Vector3 side = new Vector3();
+    private boolean sprinting;
 
     public MovementController(Player player, BuildingCollider collider, float mapSize) {
         this.player = player;
@@ -30,7 +32,20 @@ public class MovementController {
     /** Advances the player one step along the look direction yaw. */
     public void update(float delta, InputState input, float yaw) {
         float dt = delta > Constants.MAX_STEP_DELTA ? Constants.MAX_STEP_DELTA : delta;
-        player.setStance(input.crouch ? Player.Stance.CROUCH : Player.Stance.STAND);
+        if (input.sit) {
+            player.setStance(Player.Stance.SIT);
+        } else if (input.prone) {
+            player.setStance(Player.Stance.PRONE);
+        } else if (input.crouch) {
+            player.setStance(Player.Stance.CROUCH);
+        } else {
+            player.setStance(Player.Stance.STAND);
+        }
+
+        boolean moving = input.moveX != 0f || input.moveY != 0f;
+        boolean wantsSprint = input.sprint && player.getStance() == Player.Stance.STAND;
+        player.getStamina().update(dt, wantsSprint && moving);
+        sprinting = wantsSprint && moving && player.getStamina().canSprint();
 
         Vector3 position = player.getPosition();
         float speed = speedFor(input);
@@ -81,12 +96,39 @@ public class MovementController {
         player.setVerticalVelocity(verticalVelocity);
     }
 
-    /** Crouch beats sprint, and sprint only applies while standing. */
+    /**
+     * Sit and prone beat everything, crouch beats sprint, and sprint needs a standing
+     * stance plus stamina; an empty pool forces the jog until it regens (M34 A1).
+     */
     private float speedFor(InputState input) {
+        if (player.getStance() == Player.Stance.SIT) {
+            return Constants.SIT_SPEED;
+        }
+        if (player.getStance() == Player.Stance.PRONE) {
+            return Constants.PRONE_SPEED;
+        }
         if (player.isCrouching()) {
             return Constants.CROUCH_SPEED;
         }
-        return input.sprint ? Constants.SPRINT_SPEED : Constants.WALK_SPEED;
+        if (sprinting) {
+            return Constants.SPRINT_SPEED;
+        }
+        if (input.sprint && (input.moveX != 0f || input.moveY != 0f)) {
+            return Constants.JOG_SPEED; // stamina empty: jog until it regens past 30
+        }
+        if (input.analogMove) {
+            float magnitude = (float) Math.sqrt(input.moveX * input.moveX
+                    + input.moveY * input.moveY);
+            if (magnitude >= Constants.JOYSTICK_JOG_DEFLECTION) {
+                return Constants.JOG_SPEED;
+            }
+        }
+        return Constants.WALK_SPEED;
+    }
+
+    /** True while the player is really sprinting (intent + moving + stamina left). */
+    public boolean isSprinting() {
+        return sprinting;
     }
 
     private void clampToBounds(Vector3 position) {

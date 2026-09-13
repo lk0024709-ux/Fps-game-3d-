@@ -11,6 +11,10 @@ public class HudData {
     public int health;
     public int armor;
     public boolean crouching;
+    public boolean sitting;
+    public boolean prone;
+    public float stamina;
+    public boolean sprinting;
     public boolean onGround;
     public float positionX;
     public float positionY;

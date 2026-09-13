@@ -78,15 +78,23 @@ public final class Constants {
     // --- Player ---
     public static final float EYE_HEIGHT = 1.6f;
     public static final float CROUCH_EYE_HEIGHT = 1.0f;
+    public static final float SIT_EYE_HEIGHT = 0.8f;
+    public static final float PRONE_EYE_HEIGHT = 0.5f;
     public static final float WALK_SPEED = 4f;
+    public static final float JOG_SPEED = 5.5f;
     public static final float SPRINT_SPEED = 7f;
     public static final float CROUCH_SPEED = 2f;
+    public static final float PRONE_SPEED = 1f;
+    public static final float SIT_SPEED = 0f;
     public static final float GRAVITY = -9.8f;
     public static final float JUMP_HEIGHT = 1.2f;
     public static final float MAX_HEALTH = 100f;
     public static final float MAX_ARMOR = 100f;
     public static final float ARMOR_ABSORB = 0.5f;
-    public static final int MAX_WEAPONS = 2;
+    public static final int WEAPON_SLOT_COUNT = 4; // Box 1-2 primary, Box 3 pistol, Box 4 melee/fist
+    public static final int PRIMARY_SLOTS = 2;
+    public static final int PISTOL_SLOTS = 1;
+    public static final int MELEE_SLOTS = 1;
     public static final int MAX_ITEMS = 4;
     public static final float PICKUP_RADIUS = 1.5f;
 
@@ -104,6 +112,7 @@ public final class Constants {
     public static final float BOUNDS_MARGIN = 1f; // kept inside the map edge
     public static final float TOUCH_LOOK_SENSITIVITY = 0.22f; // degrees per pixel, finger drag
     // Screen-space sizes are fractions of min(screenWidth, screenHeight) — R46.
+    public static final float JOYSTICK_JOG_DEFLECTION = 0.55f; // stick past this = jog
     public static final float SPRINT_STICK_DEFLECTION = 0.92f; // stick pushed this far = sprint
     public static final float JOYSTICK_RADIUS = 0.11f;
     public static final float JOYSTICK_HOME_X = 0.17f; // idle stick centre, fraction of width
@@ -111,6 +120,14 @@ public final class Constants {
     public static final float TOUCH_BUTTON_SIZE = 0.13f;
     public static final float TOUCH_MARGIN = 0.03f;
     public static final int CIRCLE_TEXTURE_SIZE = 64; // generated disc for touch widgets
+
+    // --- M34 (master) HUD phase A1: sprint stamina + sprint FOV ---
+    public static final float STAMINA_MAX = 100f;
+    public static final float STAMINA_DRAIN_PER_SECOND = 15f; // while really sprinting
+    public static final float STAMINA_REGEN_PER_SECOND = 20f; // anything but sprinting
+    public static final float STAMINA_RELOCK_LEVEL = 30f; // sprint re-enables past this
+    public static final float SPRINT_FOV_DEGREES = 85f;
+    public static final float FOV_TRANSITION_TIME = 0.3f; // seconds, base <-> sprint FOV
 
     // --- M4 (master) shooting: hitscan, bullet holes, crosshair, ammo HUD ---
     // Weapon stats themselves live in weapons/WeaponType.java (R7) — damage, fire

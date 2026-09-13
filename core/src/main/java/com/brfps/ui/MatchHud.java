@@ -18,6 +18,8 @@ public class MatchHud {
 
     private static final String STAND_LABEL = "STAND";
     private static final String CROUCH_LABEL = "CROUCH";
+    private static final String SIT_LABEL = "SIT";
+    private static final String PRONE_LABEL = "PRONE";
     private static final String AIR_LABEL = "AIR";
     private static final String RELOAD_LABEL = "RELOADING ";
 
@@ -34,6 +36,7 @@ public class MatchHud {
     private String debugString = "";
     private int lastHealth = -1;
     private int lastArmor = -1;
+    private int lastStamina = -1;
     private String lastStance = "";
     private int lastMagazine = -1;
     private int lastReserve = -1;
@@ -99,20 +102,34 @@ public class MatchHud {
         font.getData().setScale(1f);
     }
 
-    /** "HP 100 | AR 0 | STAND". */
+    /** "HP 100 | AR 0 | ST 85 | STAND" (bars replace this in HUD phase A2). */
     private String buildStatsString(HudData data) {
         if (data.loadFailed) {
             return "";
         }
-        String stance = !data.onGround ? AIR_LABEL
-                : (data.crouching ? CROUCH_LABEL : STAND_LABEL);
-        if (data.health != lastHealth || data.armor != lastArmor || stance != lastStance) {
+        String stance;
+        if (!data.onGround) {
+            stance = AIR_LABEL;
+        } else if (data.crouching) {
+            stance = CROUCH_LABEL;
+        } else if (data.sitting) {
+            stance = SIT_LABEL;
+        } else if (data.prone) {
+            stance = PRONE_LABEL;
+        } else {
+            stance = STAND_LABEL;
+        }
+        int stamina = Math.round(data.stamina);
+        if (data.health != lastHealth || data.armor != lastArmor
+                || stamina != lastStamina || stance != lastStance) {
             lastHealth = data.health;
             lastArmor = data.armor;
+            lastStamina = stamina;
             lastStance = stance;
             statsBuilder.setLength(0);
             statsBuilder.append("HP ").append(data.health)
                     .append(" | AR ").append(data.armor)
+                    .append(" | ST ").append(stamina)
                     .append(" | ").append(stance);
             statsString = statsBuilder.toString();
         }
