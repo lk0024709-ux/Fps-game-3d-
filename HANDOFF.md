@@ -145,7 +145,7 @@ Notes for next model:
 · Numbering rule added to `RULES.md`: old commits keep repo ids (`M1`, `M2a`), new commits use master ids (`M9`, `M10`, …), docs always show both.
 · Master M2 (editor view: grid + XYZ gizmo + free-fly camera) is **parked** by user decision — build it only when the user asks.
 · Two tracks run in parallel (world/content vs. feel/combat); R1 applies inside a track.
-CI: run listed in the M9 entry below (docs-only commit, no code path touched).
+CI: run `34738539768` — ✅ green (docs-only commit, no code path touched).
 
 ---
 
@@ -194,4 +194,4 @@ Notes for next model:
 · `MeshKit` uses short indices: never let one mesh pass 32 767 vertices; `BuildingBatcher` flushes at `Constants.BUILDING_VERTEX_LIMIT` (24 000).
 · `FlatShader` is package-private in `com.brfps.world`; new world renderers must live in that package or take an already-bound `ShaderProgram` (do **not** create a second program — `Mesh.render` does not bind).
 · No JDK/SDK in the sandbox: compile-check by CI only (R18), and keep to libGDX 1.12.1 APIs you can verify (R10).
-CI: <filled in the docs commit after this push>
+CI: run `34738539768` — ✅ green, `assembleDebug` 57 s, artifact `brfps-debug-apk` uploaded
