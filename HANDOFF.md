@@ -449,7 +449,22 @@ CI: `34751085438` (push) + `34751120329` (PR #4) — ❌ **red**: `incompatible 
   (byte-for-byte the M4 size: no image and no sound file was added). PR #4: OPEN.
   Docs + the M2b.5 CC0 asset drop verified green in `34751622623` (push) +
   `34751624652` (PR #4): artifact **8 766 987 bytes = 8.77 MB** (+536 KB of house GLBs,
-  nothing loads them yet).
+  nothing loads them yet). **PR #4 MERGED into `main` on 2026-09-13** (merge commit
+  `08e1a07`).
+
+### User decisions taken at the end of this milestone (2026-09-13)
+
+1. **Assets:** the four Kenney CC0 GLBs already in `assets/buildings/` are the M2b.5
+   input — the user is not sending a separate drop for now. `house_medium` stays the
+   Phase 1 test building.
+2. **Next milestone: none started yet.** The user wants to **play the M5 APK on a device
+   first** and then send feel numbers (kick too strong / too weak). R4 stands: nobody
+   starts M2b.5, M6 or M10 without a "go".
+3. **Recoil tuning is deliberately untouched** until that device test. If it needs to
+   change, the knobs are `RECOIL_PITCH_MAX` (climb cap), `RECOIL_RAMP_SCALE` (how hard
+   shot 4+ kicks), `RECOIL_RECOVERY_PER_DEGREE`/`_MIN`/`_MAX` (how fast it returns) and
+   `SHAKE_PER_RECOIL_DEGREE` (thump) — one file, `util/Constants.java` (R7), and
+   `/home/user/sim_m5.py` re-proves the recovery for free.
 
 ---
 
