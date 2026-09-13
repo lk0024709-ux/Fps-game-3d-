@@ -40,16 +40,27 @@
 
 ## Weapons
 
-| Weapon | Damage | Fire rate | Magazine | Range | Type |
-|---|---|---|---|---|---|
-| Pistol | 15 | 300 ms | 12 | 40 m | hitscan |
-| SMG | 12 | 80 ms | 30 | 30 m | hitscan |
-| Rifle | 25 | 150 ms | 30 | 80 m | hitscan |
-| Shotgun | 60 | 800 ms | 6 | 15 m | hitscan |
-| Sniper | 90 | 1500 ms | 5 | 200 m | projectile with drop |
+| Weapon | Damage | Fire rate | Magazine | Range | Reload | Recoil | Type |
+|---|---|---|---|---|---|---|---|
+| Pistol | 15 | 300 ms | 12 | 40 m | 1.4 s | 1.2° | hitscan |
+| SMG | 12 | 80 ms | 30 | 30 m | 1.8 s | 1.0° | hitscan |
+| Rifle | 25 | 150 ms | 30 | 80 m | 2.2 s | 1.6° | hitscan |
+| Shotgun | 60 | 800 ms | 6 | 15 m | 2.6 s | 4.5° | hitscan |
+| Sniper | 90 | 1500 ms | 5 | 200 m | 3.0 s | 6.0° | projectile with drop |
 
 Implemented in `core/.../weapons/WeaponType.java` — that enum is the single
-source of truth for these numbers.
+source of truth for these numbers (fire rate is stored as the interval in seconds,
+recoil as the vertical kick in degrees per shot). The enum has carried the reload and
+recoil values since M1; this table only started listing them with master M4, and
+recoil is first *used* by master M5. `armsModelPath()` / `fireSoundPath()` in the same
+enum point at assets that do not exist yet (arms: master M20, sounds: master M13).
+
+Since master M4 the player spawns with a **Pistol** and a reserve of three magazines
+(36 rounds, `Weapon`'s constructor; ammo boxes arrive with master M12). An empty
+magazine reloads itself, `R` reloads on demand. Every weapon fires **one** hitscan ray
+today: the shotgun's per-pellet spread and the sniper's projectile drop both arrive
+with master M22 (all five weapons), which is what the enum's `isProjectile()` flag is
+for.
 
 ---
 
@@ -85,16 +96,25 @@ source of truth for these numbers.
 
 ## UI / HUD
 
-- Crosshair (center, reacts on hit)
-- Health bar + armor bar (bottom-left)
-- Ammo counter (bottom-right, `24 / 30`)
-- Minimap (top-left) with the safe-zone circle
-- Player counter (top-center, `7 alive`)
-- Kill feed (top-right)
-- Virtual joystick (left, movement)
-- Touch-look area (right half, drag to aim; pitch clamped -80°..+80°)
-- Action buttons (right): fire (large, bottom-right), jump, crouch, reload,
-  pickup, weapon switch
+Where each element is **today** (master M4) and which milestone finalizes it. The
+bottom-right corner belongs to the touch buttons, so the ammo counter sits
+bottom-center instead of bottom-right; the real scene2d HUD (master M34/M44) may
+re-decide that.
+
+| Element | Now | Finalized by |
+|---|---|---|
+| Crosshair (center) | 4 ticks + dot from `ui/Crosshair`, dims while reloading | M5 (reacts on hit), M34 |
+| Health / armor / stance | top-left text `HP 100 | AR 0 | STAND` | M34 (bars) |
+| Ammo counter | bottom-center text `Pistol 12 / 36`, `Pistol RELOADING 70%` | M34 |
+| Virtual joystick | left half, appears under the thumb (`ui/VirtualJoystick`) | M7 (polish) |
+| Touch-look area | right half drag to aim, pitch clamped −80°..+80° | M7 |
+| Action buttons | **FIRE** (large), **JUMP**, **CRCH** bottom-right | M5a layout, M12 adds pickup/switch |
+| Perf line `FPS | DC | Tri` (+ `holes`) | top-right, debug builds | removed for release (R43) |
+| Position / collider / shot readout + control hint | top-right + top-left second lines, debug builds | removed for release |
+| Minimap (top-left) with safe-zone circle | — | M35 |
+| Player counter (top-center, `7 alive`) | — | M11 |
+| Kill feed (top-right) | — | M11 |
+| Reload / pickup / weapon-switch buttons | auto-reload + `R` key for now | M12, M22 |
 
 ---
 
@@ -171,11 +191,12 @@ over the river.
 Everything here is known and intentional unless marked **bug**. Each item names the
 milestone that fixes it (R49).
 
-1. **Playable, but combat-less.** Since master M3 `GameScreen` is a real
-   first-person screen: spawn, look, walk/sprint/crouch/jump, building collision and
-   touch widgets. There is still no shooting, no crosshair, no bots, no loot and no
-   match loop — those arrive in master M4/M5 (repo M5a–M5c), M10 (repo M7a) and
-   M11/M12.
+1. **Playable and shooting, but nothing to shoot.** Since master M4 the player spawns
+   with a pistol, aims through a crosshair, fires hitscan rays that punch bullet holes
+   into walls, plinths and ground, and reloads. Damage is not applied to anything yet:
+   there are no bots (master M10 / repo M7a), no loot (M12) and no match loop (M11).
+   Recoil, muzzle flash, hit marker and screen shake are master M5 (repo M5c); gun
+   sounds are master M13.
 2. **Collision covers buildings only.** 173 CPU-side boxes (walls, door jambs,
    partitions, temple plinth + steps) stop the player; the terrain is still flat, the
    river and sea are not blockers, props do not exist yet, and roofs are unreachable.
@@ -228,6 +249,15 @@ milestone that fixes it (R49).
     Placement was validated against roads/river/spawns including that overhang, so
     keep the same margin when adding buildings: `python3`-style clearance ≥ 0 m from
     any road strip, river band or spawn point.
+16. **Every weapon fires exactly one ray.** The shotgun's pellet spread and the
+    sniper's projectile drop are master M22 (all five weapons); until then
+    `WeaponType.projectile` is data only and the shotgun is a single 60-damage hitscan.
+17. **Bullet holes are world-only and finite.** 64 decals in a ring buffer (the oldest
+    is overwritten), placed on walls, plinths and ground — never on a bot, because
+    bots arrive with master M10 and will need their own impact feedback.
+18. **`ui.MatchHud` owns all HUD text** and `screens/GameScreen` only fills
+    `ui.HudData`. Keep it that way: GameScreen was at 292/300 lines before the split,
+    and R13 caps every file at 300.
 
 ## Performance Budget
 
@@ -249,9 +279,17 @@ batch more aggressively or cut detail **before** committing, and record the numb
 HANDOFF.md.
 
 M3 cost: **0 extra draw calls, 0 extra triangles, 0 extra textures on disk.** Building
-collision is 173 boxes in two flat `float[]` arrays built once at load (≈4.8 KB), and
+collision is 173 boxes in two flat `float[]` arrays built once at load (≈5.5 KB), and
 the touch widgets are 3 quads from a generated 64×64 circle texture drawn in the
 existing HUD batch. The first-person HUD is text-only for now.
+
+M4 cost: **+1 draw call and ≤ 128 triangles** from the moment the first bullet hole
+exists (8 → 9 draw calls in a match). All 64 decals live in one dynamic mesh (4 KB of
+floats, 384 indices built once) and only the 16 floats of the newest quad are
+re-uploaded per shot. Crosshair and the four touch buttons reuse the generated circle
+and white textures — still no image files, APK unchanged. A shot costs one pass over
+171 wall boxes plus 2 plinth boxes, i.e. at most 12.5 shots/s × 173 slab tests for an
+SMG; no allocation anywhere in the path (R6).
 
 ## Milestone Numbering (read this first)
 
@@ -272,8 +310,8 @@ they are used so that no model ever has to guess:
 5. **Two tracks run in parallel**, because the repo started with the world while the
    master prompt starts with game feel. The user chose this order on 2026-09-13, so
    R1 ("never skip milestones") applies **inside a track**, not across tracks:
-   - **Track A — world & content:** M9 → M16 → M17 → M18 → M19 → M20 → M21
-   - **Track B — feel, combat & systems:** M2 → M3 → M4 → M5 → M6 → M7 → M8 → M10 → M11 → …
+   - **Track A — world & content:** M9 ✅ → M16 → M17 → M18 → M19 → M20 → M21
+   - **Track B — feel, combat & systems:** M2 ✅ → M3 ✅ → M4 ✅ → **M5** → M6 → M7 → M8 → M10 → M11 → …
 
 ## Milestone Status
 
@@ -287,14 +325,15 @@ they are used so that no model ever has to guess:
 | **M9** | **M9** (= repo M2b) | **Town + village buildings** | ✅ 2026-09-13 — 32 buildings, 3 094 tris, **1** draw call |
 | **M2** | **M2** (no repo letter) | **Editor view** — world grid + XYZ axis gizmo + free-fly camera + corner orientation gizmo | ✅ 2026-09-13 — +3 draw calls in editor mode only |
 | **M3** | **M3** (= repo M3a, M3b, M3c) | **First-person camera + movement + touch controls + building collision** | ✅ 2026-09-13 — +0 draw calls, 173 collision boxes, game is now walkable |
+| **M4** | **M4** (= repo M5a, M5b) | **Shooting** — hitscan raycast, pistol, magazine/reload, bullet-hole decals, crosshair, FIRE button, ammo HUD | ✅ 2026-09-13 — +1 draw call / +128 tris max, HUD split into `ui.MatchHud` |
 
 ### Next candidates — waiting for the user's "go" (R4)
 
 | Pick | Master id | Repo id | Scope | Blocked by |
 |---|---|---|---|---|
-| **A (recommended)** | M4 + M5 | M5a, M5b, M5c | Shooting: crosshair, hitscan raycast, damage, muzzle flash, recoil, screen shake | nothing (M3 done) |
-| B | M16 + M17 | M2c | Industrial zone + military base (continues Track A; warehouse/factory/barracks already in the kit) | nothing |
-| C | M18 | M2d | Props: trees, cars, barrels, crates, bridge, village well + crop fields | nothing |
+| **A (recommended)** | M5 | M5c | Hit feedback: screen shake, muzzle flash, recoil, hit marker | nothing (M4 done) |
+| B | M10 | M7a | 3 bots that patrol and shoot back — finally something to damage | nothing (M3+M4 done) |
+| C | M16 + M17 | M2c | Industrial zone + military base (Track A; warehouse/factory/barracks already in the kit) | nothing |
 | D | M8 | M2e | Hills: noise heightmap + carved river channel + heightfield collision | nothing |
 
 M14/M15 ("full town" / "full village") are **substantially covered by M9**: the town
@@ -313,8 +352,8 @@ has no separate repo row (its work is folded into the listed one).
 | M1 | M1 | Skeleton + CI | ✅ |
 | M2 | — (debug package) | Editor view (grid + XYZ axes + free camera) | ✅ done |
 | M3 | M3a, M3b, M3c | First-person camera + movement (+ touch controls, + building collision) | ✅ done |
-| M4 | M5a, M5b | Shooting + raycast + hit feedback | next (option A) |
-| M5 | M5c | Screen shake + muzzle flash + hit marker | not started |
+| M4 | M5a, M5b | Shooting + hitscan raycast + bullet holes + crosshair/ammo HUD | ✅ done |
+| M5 | M5c | Screen shake + muzzle flash + hit marker + recoil | next (option A) |
 | M6 | — (folded into M3c) | Head bob + footsteps + sprint FOV | not started |
 | M7 | M3a | Touch controls **polish** (dead zone, sensitivity setting, haptics) — basic touch controls already shipped inside M3 | not started |
 | M8 | M2e | Hills terrain + noise heightmap + lighting | not started |
@@ -408,6 +447,51 @@ Rules worth keeping:
 - The HUD draws `HP | AR | STAND/CROUCH/AIR` top-left, `FPS | DC | Tri` top-right, and
   (debug builds) `X Z Y | BOX n` plus a one-line control hint. Strings are rebuilt only
   when a displayed value changes, so the render loop allocates nothing (R6).
+
+## Shooting (master M4, repo M5a–M5b)
+
+One hitscan ray per shot, cast from the camera through the crosshair, tested against
+the same boxes the player collides with.
+
+| Class | Package | Job |
+|---|---|---|
+| `WeaponType` | `weapons` | the five SPEC weapons: damage, fire interval, magazine, range, reload time, recoil, projectile flag (unchanged since M1) |
+| `Weapon` | `weapons` | one gun instance: magazine, reserve ammo, fire cooldown, reload timer (+ `getReloadProgress()` for the HUD) |
+| `WeaponController` | `weapons` | ticks the gun, casts the shot ray, spawns the decal, counts shots |
+| `RayHit` | `world` | reused ray result: distance, point, unit normal, surface kind |
+| `BuildingCollider.raycast` | `world` | slab test per wall box over its real height range + plinth tops + flat ground |
+| `ColliderBoxes` | `world` | bakes the boxes (8 floats each) from the layout — split out of `BuildingCollider` to respect the 300-line limit |
+| `ImpactDecals` | `world` | 64 bullet holes in one dynamic mesh: ring buffer, 1 draw call, 16 floats re-uploaded per shot |
+| `Crosshair`, `MatchHud`, `HudData` | `ui` | crosshair, all HUD text, and the per-frame value snapshot the HUD reads |
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Fire | hold **left mouse button** | hold **FIRE** (large, bottom-right) |
+| Reload | `R` | automatic when the magazine empties |
+
+Rules worth keeping:
+
+- **The ray stops at the weapon's range** and only reports the *nearest* hit
+  (`RayHit.accept` keeps the minimum), so walls, plinth tops and ground can be tested
+  in any order.
+- **Walls are tested over their real height range** (`baseY..topY`), so a shot can pass
+  over a hut and a decal never floats above a wall it did not hit. Player collision, in
+  contrast, is deliberately height-blind.
+- **Ground hits are limited to the map bounds** (`±size/2`); beyond the island a shot
+  simply flies. When master M8 adds hills, `castGround` is the one place to replace the
+  flat `y = 0` plane with heightfield sampling.
+- **Decals are a ring buffer of 64** (`Constants.DECAL_POOL_SIZE`): the oldest hole is
+  overwritten, all of them draw in one call with the world's already-bound shader
+  (`Arena.worldShader()` — never create a second program, `Mesh.render` does not bind).
+- **Decal orientation** uses `u = normalize(cross(normal, helper))`, `v = cross(normal, u)`
+  with `helper = +Y` unless the normal is near-vertical, then `+X`; corners are written
+  CCW seen from the shooter, so `cross(u, v) == normal`.
+- **`Math3D.direction(yaw, pitch, out)` is now the only look-direction formula** in the
+  project (it used to disagree with the cameras). Bots, turrets and grenade throws must
+  call it too, or aim will not match what the player sees.
+- Damage is *not* applied yet: there is nothing to shoot. Master M10 (bots) inserts a
+  bot test before the world test in `WeaponController.castShot`, and master M5 adds the
+  hit marker, muzzle flash, recoil and screen shake.
 
 ## Editor View (master M2)
 

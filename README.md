@@ -66,16 +66,21 @@ temple plinth, sprint, crouch and jump.
 | Action | Desktop | Phone |
 |---|---|---|
 | Move | `W A S D` / arrows | virtual stick — appears where your left thumb lands |
-| Look | hold **right mouse button** + drag | drag anywhere on the right half |
+| Look / aim | hold **right mouse button** + drag | drag anywhere on the right half |
+| **Fire** | hold **left mouse button** | hold **FIRE** (large, bottom-right) |
+| Reload | `R` | automatic when the magazine empties |
 | Sprint | hold `Shift` | push the stick all the way out |
 | Crouch | `Ctrl` or `C` | **CRCH** button |
 | Jump | `Space` | **JUMP** button |
 | Back to menu | `Esc` / `Back` | `Back` |
 
-Buildings are solid: walls, door jambs and interior partitions stop you, doorways are
-walkable, and roofs are not climbable. The HUD shows health/armor/stance and, in debug
-builds, `FPS | DC | Tri` plus your position. Details: `SPEC.md → First-Person Controls
-(master M3)`.
+You spawn with a pistol (12 rounds in the magazine, 36 in reserve). Shots are hitscan: they stop at the
+weapon's range and leave a bullet hole in whatever they hit — walls, door jambs,
+interior partitions, the temple plinth and the ground. Buildings are solid, doorways are
+walkable, roofs are not climbable. The HUD shows a crosshair, `HP | AR | stance`, the
+ammo counter and, in debug builds, `FPS | DC | Tri`, your position and shot statistics.
+Details: `SPEC.md → First-Person Controls (master M3)` and `SPEC.md → Shooting
+(master M4)`.
 
 ## Debug / Editor View
 
