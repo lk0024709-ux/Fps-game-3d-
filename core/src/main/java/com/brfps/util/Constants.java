@@ -19,10 +19,13 @@ public final class Constants {
     // --- Map ---
     public static final float MAP_SIZE = 300f;
 
-    // --- Map debug visuals (toggle off in later milestones) ---
-    public static final boolean DEBUG_SHOW_ZONE_MARKERS = true; // set false after M5
-    public static final boolean DEBUG_SHOW_SPAWN_MARKERS = true; // remove after M4
-    public static final boolean DEBUG_SHOW_CHUNK_GRID = true; // preview of M2e chunking
+    // --- Debug tools: ONE master switch for release (R43), sub-flags below ---
+    public static final boolean DEBUG_TOOLS_ENABLED = true; // flip to false for release builds
+
+    // --- Map debug visuals (sub-flags of DEBUG_TOOLS_ENABLED) ---
+    public static final boolean DEBUG_SHOW_ZONE_MARKERS = true; // set false after master M5
+    public static final boolean DEBUG_SHOW_SPAWN_MARKERS = true; // remove after master M31
+    public static final boolean DEBUG_SHOW_CHUNK_GRID = true; // preview of M19/M2e chunking
     public static final int TERRAIN_SEGMENTS = 40; // raise in M2e when heightfield lands
     public static final float ROAD_Y_OFFSET = 0.05f;
     public static final float RIVER_Y_OFFSET = 0.03f;
@@ -37,6 +40,26 @@ public final class Constants {
     public static final float ORBIT_HEIGHT = 120f;
     public static final float ORBIT_SPEED = 12f; // degrees per second
     public static final float SCREENSHOT_DELAY = 5f; // seconds into GameScreen
+
+    // --- M2 (master) editor view: free-fly camera, world grid, axis gizmos ---
+    public static final float EDITOR_SPEED = 12f; // m/s walking speed in the editor
+    public static final float EDITOR_SPRINT_SPEED = 45f; // m/s while Shift is held
+    public static final float EDITOR_LOOK_SENSITIVITY = 0.25f; // degrees per pixel dragged
+    public static final float EDITOR_TOUCH_RADIUS = 70f; // px of drag for full joystick deflection
+    public static final float EDITOR_MIN_Y = 1.5f;
+    public static final float EDITOR_MAX_Y = 220f;
+    public static final float EDITOR_START_Y = 45f;
+    public static final float EDITOR_FAR_PLANE = 900f; // editor flies far above the map
+    public static final float GRID_MINOR_STEP = 10f;
+    public static final float GRID_MAJOR_STEP = 50f;
+    public static final float EDITOR_GRID_Y = 0.12f; // above the chunk grid (0.08) to avoid z-fighting
+    public static final float AXIS_LENGTH = 12f;
+    public static final float AXIS_GIZMO_Y = 0.2f;
+    // Screen-space sizes are fractions of min(screenWidth, screenHeight) — R46.
+    public static final float AXIS_INDICATOR_SIZE = 0.13f;
+    public static final float EDITOR_MARGIN = 0.02f;
+    public static final float EDITOR_BUTTON_SIZE = 0.10f;
+    public static final float MODE_BUTTON_SIZE = 0.09f;
 
     // --- M2b buildings (shared dimensions; per-type sizes live in BuildingType) ---
     public static final float WALL_THICKNESS = 0.2f;

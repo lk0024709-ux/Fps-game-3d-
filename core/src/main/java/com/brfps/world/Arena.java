@@ -65,9 +65,12 @@ public class Arena {
         roadMesh = buildRoads();
         waterMesh = layout.water ? buildWaterPlane() : null;
         riverMesh = layout.rivers.size > 0 ? buildRivers() : null;
-        markerMesh = Constants.DEBUG_SHOW_ZONE_MARKERS ? buildZoneMarkers() : null;
-        spawnMesh = Constants.DEBUG_SHOW_SPAWN_MARKERS ? buildSpawnMarkers() : null;
-        gridMesh = Constants.DEBUG_SHOW_CHUNK_GRID ? buildChunkGrid() : null;
+        markerMesh = Constants.DEBUG_TOOLS_ENABLED && Constants.DEBUG_SHOW_ZONE_MARKERS
+                ? buildZoneMarkers() : null;
+        spawnMesh = Constants.DEBUG_TOOLS_ENABLED && Constants.DEBUG_SHOW_SPAWN_MARKERS
+                ? buildSpawnMarkers() : null;
+        gridMesh = Constants.DEBUG_TOOLS_ENABLED && Constants.DEBUG_SHOW_CHUNK_GRID
+                ? buildChunkGrid() : null;
         buildings = new BuildingBatcher(layout.buildings);
     }
 

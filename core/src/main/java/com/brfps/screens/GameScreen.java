@@ -3,6 +3,7 @@ package com.brfps.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -10,6 +11,8 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.brfps.BrFpsGame;
+import com.brfps.debug.DebugOverlay;
+import com.brfps.debug.EditorCamera;
 import com.brfps.util.Constants;
 import com.brfps.util.ScreenshotUtil;
 import com.brfps.world.Arena;
@@ -17,23 +20,37 @@ import com.brfps.world.MapLayout;
 import com.brfps.world.MapRegistry;
 
 /**
- * M2a world viewer: renders the loaded arena with an orbiting debug camera,
- * a performance HUD (FPS / draw calls / triangles) and a one-shot screenshot.
- * Replaced by the real first-person GameScreen in M3.
+ * World viewer: renders the loaded arena with either the orbiting overview camera
+ * (M2a) or the free-fly editor camera with grid and axis gizmos (master M2), plus a
+ * performance HUD and a one-shot screenshot. Replaced by the real first-person
+ * GameScreen in master M3.
  */
 public class GameScreen implements Screen {
+
+    private static final String ORBIT_LABEL = "CAM: ORBIT";
+    private static final String EDITOR_LABEL = "CAM: EDITOR";
 
     private final BrFpsGame game;
     private final PerspectiveCamera camera;
     private final Arena arena;
+    private final EditorCamera editorCamera;
+    private final DebugOverlay debugOverlay;
+    private final String helpText;
     private final SpriteBatch batch = new SpriteBatch();
     private final ScreenViewport viewport = new ScreenViewport();
     private final GlyphLayout hudLayout = new GlyphLayout();
     private final StringBuilder hudBuilder = new StringBuilder(48);
+    private final StringBuilder editorBuilder = new StringBuilder(96);
     private String hudString = "";
+    private String editorString = "";
     private int lastFps = -1;
     private int lastDrawCalls = -1;
     private int lastTriangles = -1;
+    private int lastPosX = Integer.MIN_VALUE;
+    private int lastPosY = Integer.MIN_VALUE;
+    private int lastPosZ = Integer.MIN_VALUE;
+    private int lastYaw = Integer.MIN_VALUE;
+    private int lastPitch = Integer.MIN_VALUE;
 
     private float orbitAngle;
     private float elapsed;
@@ -42,6 +59,9 @@ public class GameScreen implements Screen {
 
     public GameScreen(BrFpsGame game) {
         this.game = game;
+        helpText = Gdx.input.isPeripheralAvailable(Input.Peripheral.MultitouchScreen)
+                ? "drag left half: fly - drag right half: look - UP/DN: altitude"
+                : "WASD/arrows: move - Q/E: down/up - Shift: fast - RMB drag: look";
         camera = new PerspectiveCamera(Constants.FOV_DEGREES,
                 Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.near = Constants.NEAR_PLANE;
@@ -56,10 +76,14 @@ public class GameScreen implements Screen {
             Gdx.app.error("GameScreen", "no map could be loaded (id=" + mapId + ")");
             loadFailed = true;
             arena = null;
+            editorCamera = null;
+            debugOverlay = null;
             return;
         }
         loadFailed = false;
         arena = new Arena(layout);
+        editorCamera = new EditorCamera(camera, layout.size);
+        debugOverlay = Constants.DEBUG_TOOLS_ENABLED ? new DebugOverlay(layout.size) : null;
     }
 
     @Override
@@ -79,16 +103,31 @@ public class GameScreen implements Screen {
             return;
         }
 
-        updateCamera(delta);
+        if (debugOverlay != null && debugOverlay.toggleRequested()) {
+            editorCamera.setActive(!editorCamera.isActive());
+        }
+        if (editorActive()) {
+            editorCamera.update(delta);
+        } else {
+            updateCamera(delta);
+        }
 
         Gdx.gl.glClearColor(0.55f, 0.75f, 0.92f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         if (arena != null) {
             arena.render(camera);
         }
+        if (editorActive() && debugOverlay != null) {
+            debugOverlay.render(camera);
+        }
 
         renderHud();
         maybeCaptureScreenshot();
+    }
+
+    /** True while the free-fly editor camera owns the view (master M2). */
+    private boolean editorActive() {
+        return editorCamera != null && editorCamera.isActive();
     }
 
     private void updateCamera(float delta) {
@@ -112,6 +151,9 @@ public class GameScreen implements Screen {
         int fps = Gdx.graphics.getFramesPerSecond();
         int drawCalls = arena == null ? 0 : arena.getDrawCalls();
         int triangles = arena == null ? 0 : arena.getTrianglesRendered();
+        if (editorActive() && debugOverlay != null) {
+            drawCalls += debugOverlay.getDrawCalls();
+        }
         if (fps != lastFps || drawCalls != lastDrawCalls || triangles != lastTriangles) {
             lastFps = fps;
             lastDrawCalls = drawCalls;
@@ -125,12 +167,16 @@ public class GameScreen implements Screen {
 
         BitmapFont font = game.getAssets().font();
         font.getData().setScale(1f);
-        font.setColor(0.05f, 0.08f, 0.12f, 1f);
         batch.begin();
+        font.setColor(0.05f, 0.08f, 0.12f, 1f);
         hudLayout.setText(font, hudString);
         font.draw(batch, hudLayout,
                 viewport.getWorldWidth() - hudLayout.width - 12f,
                 viewport.getWorldHeight() - 12f);
+        drawModeButton(font);
+        if (editorActive()) {
+            drawEditorHud(font);
+        }
         if (loadFailed) {
             hudLayout.setText(font, "Map load failed - see logcat (BACK to return)");
             font.draw(batch, hudLayout,
@@ -138,6 +184,62 @@ public class GameScreen implements Screen {
                     viewport.getWorldHeight() * 0.5f);
         }
         batch.end();
+    }
+
+    /** Top-left CAM toggle: the only way to switch cameras on a touch device. */
+    private void drawModeButton(BitmapFont font) {
+        if (debugOverlay == null) {
+            return;
+        }
+        float margin = EditorCamera.buttonMargin();
+        float w = DebugOverlay.modeButtonWidth();
+        float h = DebugOverlay.modeButtonHeight();
+        drawButton(font, editorActive() ? EDITOR_LABEL : ORBIT_LABEL,
+                margin, viewport.getWorldHeight() - margin - h, w, h);
+    }
+
+    /** Editor readout: coordinates, help text and the two altitude buttons. */
+    private void drawEditorHud(BitmapFont font) {
+        float worldW = viewport.getWorldWidth();
+        float worldH = viewport.getWorldHeight();
+        int x = Math.round(editorCamera.getX());
+        int y = Math.round(editorCamera.getY());
+        int z = Math.round(editorCamera.getZ());
+        int yaw = Math.round(editorCamera.getYaw());
+        int pitch = Math.round(editorCamera.getPitch());
+        if (x != lastPosX || y != lastPosY || z != lastPosZ || yaw != lastYaw || pitch != lastPitch) {
+            lastPosX = x;
+            lastPosY = y;
+            lastPosZ = z;
+            lastYaw = yaw;
+            lastPitch = pitch;
+            editorBuilder.setLength(0);
+            editorBuilder.append("X ").append(x).append("  Y ").append(y).append("  Z ").append(z)
+                    .append("   yaw ").append(yaw).append("  pitch ").append(pitch);
+            editorString = editorBuilder.toString();
+        }
+        font.setColor(0.05f, 0.08f, 0.12f, 1f);
+        hudLayout.setText(font, editorString);
+        font.draw(batch, hudLayout, worldW - hudLayout.width - 12f, worldH - 34f);
+        hudLayout.setText(font, helpText);
+        font.draw(batch, hudLayout, worldW - hudLayout.width - 12f, worldH - 54f);
+
+        float margin = EditorCamera.buttonMargin();
+        float size = EditorCamera.buttonSize();
+        float right = worldW - margin - size;
+        drawButton(font, "UP", right, margin * 2f + size, size, size);
+        drawButton(font, "DN", right, margin, size, size);
+    }
+
+    /** Translucent button background with a centered label (batch coords, y up). */
+    private void drawButton(BitmapFont font, String label, float x, float y, float w, float h) {
+        batch.setColor(0.06f, 0.10f, 0.16f, 0.38f);
+        batch.draw(game.getAssets().white(), x, y, w, h);
+        batch.setColor(Color.WHITE);
+        font.setColor(1f, 1f, 1f, 0.95f);
+        hudLayout.setText(font, label);
+        font.draw(batch, hudLayout, x + (w - hudLayout.width) * 0.5f,
+                y + (h + hudLayout.height) * 0.5f);
     }
 
     private static String formatK(int value) {
@@ -179,6 +281,9 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         batch.dispose();
+        if (debugOverlay != null) {
+            debugOverlay.dispose();
+        }
         if (arena != null) {
             arena.dispose();
         }
