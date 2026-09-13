@@ -265,4 +265,13 @@ Notes for next model:
 · Never create a second shader program for meshes drawn inside an existing pass: `Mesh.render` does not bind, so bind once and pass the program (see `BuildingBatcher.render(ShaderProgram)`).
 · `MeshKit` lives in `com.brfps.world` and is public — reuse it for any new baked line/triangle geometry instead of writing new mesh code.
 · No JDK/SDK in the sandbox: CI is the only compiler (R18).
-CI: <filled after this push>
+· **libGDX API lesson (this milestone broke CI once):** `Vector3` has **no**
+  `addScaled()` — the scaled add is `add(Vector3 v, float scalar)` / `mulAdd(...)`.
+  Verify a method exists in the 1.12.1 sources before using it (R10); prefer
+  `set().scl()` + `add()` on a reused scratch vector when in doubt.
+· The Arena sandbox can be re-cloned between turns: local commits may vanish while
+  the working tree survives. Before committing, run `git fetch` + compare
+  `git log --oneline HEAD` with `git ls-remote origin`, and if the branch was reset,
+  `git reset --mixed <remote tip>` (keeps files) instead of force-pushing.
+CI: runs `34743333496` (push) + `34743335371` (PR #3) — ✅ green after one fix
+  commit (`34743245545`/`34743247848` were ❌ red: `cannot find symbol addScaled`).
