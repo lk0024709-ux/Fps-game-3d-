@@ -130,7 +130,66 @@ public final class Constants {
     public static final float CROSSHAIR_ALPHA = 0.85f;
     public static final float CROSSHAIR_RELOAD_ALPHA = 0.35f;
 
-    // --- Main menu (master M3 wiring; scene2d UI arrives with master M44) ---
+    // --- M5 (master) game feel: recoil, shake, muzzle flash, hit marker, beep ---
+    // Per-weapon kick in degrees lives in weapons/WeaponType.recoil() (R7); these are
+    // the shape of the recovery and the strength of the feedback around it.
+    // Recoil is FULL recovery (user decision 2026-09-13): the offset is transient and
+    // decays to zero, never written back into the camera's yaw/pitch, so a spray climbs
+    // and letting go returns the crosshair to exactly where the player was aiming.
+    public static final float RECOIL_RECOVERY_PER_DEGREE = 0.055f; // s of recovery per kick degree
+    public static final float RECOIL_RECOVERY_MIN = 0.08f; // floor, so a pistol still snaps back
+    public static final float RECOIL_RECOVERY_MAX = 0.40f; // ceiling, so a sniper cannot hang forever
+    public static final float RECOIL_RECOVERY_SPEED = 7.5f; // exponential rate over the recovery time
+    public static final float RECOIL_HOLD_TIME = 0.06f; // a shot this recent still counts as spraying
+    public static final float RECOIL_HOLD_DECAY_PER_SECOND = 3.0f; // slow bleed while the trigger is held
+    public static final int RECOIL_RAMP_START_SHOT = 3; // burst shot after which the climb ramps
+    public static final float RECOIL_RAMP_SCALE = 1.25f; // multiplier on the kick while ramping
+    public static final float RECOIL_PITCH_MAX = 14f; // degrees the pattern may climb at most
+    public static final float RECOIL_YAW_ALTERNATE = 0.12f; // left-right sway per shot, in kicks
+    public static final float RECOIL_YAW_RANDOM = 0.08f; // degrees of jitter added to the sway
+    public static final float RECOIL_YAW_MAX = 4f; // degrees the sway may drift at most
+    public static final float RECOIL_BLOOM_MAX = 2.5f; // crosshair gap grows this many times
+    // Shake is proportional to the weapon's recoil, so the shotgun kicks harder.
+    public static final float SHAKE_PER_RECOIL_DEGREE = 0.20f; // degrees of shake per kick degree
+    public static final float SHAKE_MAX_AMPLITUDE = 3.0f;
+    public static final float SHAKE_DECAY_PER_SECOND = 14f;
+    public static final float SHAKE_FREQUENCY = 1400f; // degrees per second of noise phase
+    public static final float SHAKE_ROLL_SCALE = 0.6f; // camera roll as a fraction of amplitude
+    public static final float SHAKE_EPSILON = 0.01f; // below this the shake is considered over
+    // Muzzle flash is SCREEN-SPACE until master M20 moves it to the weapon's world-space
+    // muzzle attach point (see SPEC -> Game Feel). Position is a fraction of the screen
+    // and size a fraction of min(width, height) (R46).
+    public static final float MUZZLE_FLASH_TIME = 0.07f; // seconds the flash is visible
+    public static final float MUZZLE_FLASH_X = 0.5f; // gun is bottom-centre until arms exist
+    public static final float MUZZLE_FLASH_Y = 0.38f; // y-up fraction of the screen height
+    public static final float MUZZLE_FLASH_SIZE = 0.22f; // glow diameter
+    public static final float MUZZLE_FLASH_CORE_SCALE = 0.35f; // white core vs. glow
+    public static final float MUZZLE_FLASH_STAR_LENGTH = 0.85f; // star arm vs. glow
+    public static final float MUZZLE_FLASH_STAR_THICKNESS = 0.16f;
+    public static final float MUZZLE_FLASH_JITTER = 0.85f; // smallest per-shot scale factor
+    public static final float MUZZLE_FLASH_ALPHA = 0.9f;
+    public static final float MUZZLE_FLASH_R = 1.0f; // warm flash colour
+    public static final float MUZZLE_FLASH_G = 0.82f;
+    public static final float MUZZLE_FLASH_B = 0.45f;
+    public static final int MUZZLE_FLASH_TEXTURE_SIZE = 64; // generated radial glow (POT, R12)
+    public static final float HIT_MARKER_TIME = 0.16f;
+    public static final float HIT_MARKER_GAP = 0.012f; // distance from the screen centre
+    public static final float HIT_MARKER_SPREAD = 0.008f; // extra travel while it fades
+    public static final float HIT_MARKER_LENGTH = 0.018f;
+    public static final float HIT_MARKER_THICKNESS = 0.003f;
+    public static final float HIT_MARKER_ALPHA = 0.95f;
+    // Placeholder gunshot beep (master M13 replaces it with real OGG samples).
+    public static final boolean SOUND_ENABLED = true; // master audio switch until SoundManager
+    public static final int BEEP_SAMPLE_RATE = 22050;
+    public static final int BEEP_SAMPLES = 2048; // 0.093 s of mono 16-bit PCM
+    public static final float BEEP_FREQUENCY = 760f; // Hz fundamental (plus one octave)
+    public static final float BEEP_HARMONIC = 0.35f; // octave mix, 0..1
+    public static final float BEEP_DECAY_PER_SECOND = 42f; // exponential envelope rate
+    public static final int BEEP_ATTACK_SAMPLES = 24; // fade-in, avoids the opening click
+    public static final float BEEP_GAIN = 0.45f; // mix level, keeps the sum below clipping
+    public static final float BEEP_VOLUME = 0.6f; // device volume, 0..1
+
+    // --- Main menu (master M3 wiring; scene2d UI arrives at master M44) ---
     public static final float MENU_BUTTON_HEIGHT = 0.10f; // fraction of the short screen side
     public static final float MENU_PLAY_Y = 0.50f; // bottom edge, fraction of height (y up)
     public static final float MENU_EDITOR_Y = 0.37f;

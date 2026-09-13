@@ -82,6 +82,18 @@ ammo counter and, in debug builds, `FPS | DC | Tri`, your position and shot stat
 Details: `SPEC.md → First-Person Controls (master M3)` and `SPEC.md → Shooting
 (master M4)`.
 
+### Gun feel
+
+Holding the trigger makes the gun climb: the view kicks up by the weapon's recoil
+(pistol 1.2° per shot, up to 14° of total climb) with a left-right sway, the crosshair
+blooms open, a flash pops at the bottom of the screen, a short crack plays, and every
+impact flashes a hit marker over the crosshair. **Let go and the aim returns to exactly
+where you were pointing** — recoil here is full recovery (Free Fire style), never a
+permanent offset, so tapping is always accurate and spraying costs you the climb.
+Shake and a slight camera roll are proportional to the weapon, so a shotgun thumps and a
+pistol barely moves. The gun sound is a placeholder beep until master M13, and the flash
+moves onto the weapon model at master M20. Details: `SPEC.md → Game Feel (master M5)`.
+
 ## Debug / Editor View
 
 Set `Constants.DEBUG_TOOLS_ENABLED = false` for release builds — one switch turns off

@@ -10,6 +10,9 @@ import com.brfps.world.RayHit;
  * camera, leaves a bullet hole on whatever it hit, and counts shots for the HUD.
  * The ray stops at the weapon's range; damage to bots lands with master M10, when
  * there is finally something to damage (bots will be tested before the world).
+ * Since master M5 the class also reports the shot it just took
+ * ({@link #firedThisFrame()}), which is the single event the screen turns into recoil,
+ * shake, muzzle flash, hit marker and the placeholder beep.
  */
 public class WeaponController {
 
@@ -21,6 +24,8 @@ public class WeaponController {
     private int shotsFired;
     private int shotsOnTarget;
     private float lastHitDistance;
+    private boolean firedThisFrame;
+    private float lastShotRecoil;
 
     public WeaponController(Weapon weapon, BuildingCollider collider, ImpactDecals decals) {
         this.weapon = weapon;
@@ -38,6 +43,7 @@ public class WeaponController {
      */
     public void update(float delta, boolean triggerHeld, boolean reloadPressed,
                        Vector3 origin, Vector3 direction) {
+        firedThisFrame = false;
         weapon.update(delta);
         if (reloadPressed) {
             weapon.startReload();
@@ -53,6 +59,8 @@ public class WeaponController {
             return; // still on the fire-rate cooldown
         }
         shotsFired++;
+        firedThisFrame = true;
+        lastShotRecoil = weapon.getType().recoil();
         castShot(origin, direction);
     }
 
@@ -73,6 +81,16 @@ public class WeaponController {
 
     public Weapon getWeapon() {
         return weapon;
+    }
+
+    /** True only on the frame a shot left the barrel: drives every M5 effect. */
+    public boolean firedThisFrame() {
+        return firedThisFrame;
+    }
+
+    /** Vertical kick in degrees of the shot just fired ({@code WeaponType.recoil()}). */
+    public float getLastShotRecoil() {
+        return lastShotRecoil;
     }
 
     /** Impact data of the most recent shot, valid until the next shot. */

@@ -10,14 +10,16 @@ import com.badlogic.gdx.utils.Disposable;
 /**
  * Central asset holder. Real art is streamed through the AssetManager once it
  * exists on disk; until then generated textures back every placeholder — a 2x2
- * white quad tinted at draw time, and a filled circle for the touch widgets — so
- * the game always renders without shipping any image files.
+ * white quad tinted at draw time, a filled circle for the touch widgets and a radial
+ * glow for the muzzle flash (master M5) — so the game always renders without shipping
+ * any image file.
  */
 public class Assets implements Disposable {
 
     private final AssetManager manager = new AssetManager();
     private Texture white;
     private Texture circle;
+    private Texture glow;
     private BitmapFont font;
 
     /** Loads the handful of assets needed before the first frame. */
@@ -37,8 +39,36 @@ public class Assets implements Disposable {
         circle = new Texture(disc);
         disc.dispose();
 
+        glow = buildGlow();
+
         font = new BitmapFont();
         font.setUseIntegerPositions(false);
+    }
+
+    /**
+     * Radial white glow with a quadratic alpha falloff, used by the muzzle flash
+     * (squashed along one axis it also makes the flash star). Power-of-two and inside
+     * the 512 cap (R12), generated once at startup so no PNG ships in the APK (R25).
+     */
+    private Texture buildGlow() {
+        int size = Constants.MUZZLE_FLASH_TEXTURE_SIZE;
+        Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        pixmap.setBlending(Pixmap.Blending.None);
+        float center = (size - 1) * 0.5f;
+        float maxDistance = size * 0.5f;
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                float dx = (x - center) / maxDistance;
+                float dy = (y - center) / maxDistance;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                float falloff = 1f - Math.min(distance, 1f);
+                int alpha = Math.round(255f * falloff * falloff);
+                pixmap.drawPixel(x, y, (alpha << 24) | 0x00FFFFFF);
+            }
+        }
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
     }
 
     public AssetManager getManager() {
@@ -55,6 +85,11 @@ public class Assets implements Disposable {
         return circle;
     }
 
+    /** Generated radial glow for the muzzle flash (master M5). */
+    public Texture glow() {
+        return glow;
+    }
+
     public BitmapFont font() {
         return font;
     }
@@ -66,6 +101,9 @@ public class Assets implements Disposable {
         }
         if (circle != null) {
             circle.dispose();
+        }
+        if (glow != null) {
+            glow.dispose();
         }
         if (font != null) {
             font.dispose();

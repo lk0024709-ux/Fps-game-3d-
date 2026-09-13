@@ -35,6 +35,16 @@ public class HudData {
     public int shotsOnTarget;
     public float lastHitDistance;
 
+    // --- game feel (master M5) ---
+    /** 0 settled .. 1 full recoil kick: blooms the crosshair. */
+    public float crosshairBloom;
+    /** 1 while the hit marker should be visible. */
+    public boolean hitMarker;
+    /** 1 while the muzzle flash should be visible. */
+    public boolean muzzleFlash;
+    /** Current recoil pitch offset in degrees (debug readout). */
+    public float recoilPitch;
+
     // --- static text owned by the screen ---
     public String helpText;
     public boolean loadFailed;
