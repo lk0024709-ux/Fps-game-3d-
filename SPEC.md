@@ -33,7 +33,7 @@
 | Gravity | -9.8 m/s² |
 | Jump height | 1.2 m |
 | Eye height | 1.6 m (1.0 m crouched) |
-| Carry capacity | 2 weapons, 4 items |
+| Carry capacity | 2 primary + 1 pistol + 1 melee/fist, 4 items |
 | Pickup | Auto on proximity (1.5 m) + manual button |
 
 ---
@@ -63,6 +63,26 @@ magazine reloads itself, `R` reloads on demand. Every weapon fires **one** hitsc
 today: the shotgun's per-pellet spread and the sniper's projectile drop both arrive
 with master M22 (all five weapons), which is what the enum's `isProjectile()` flag is
 for.
+
+### Weapon slots (HUD Phase A1 data, A2 display, M12 pickup)
+
+Four boxes, fixed categories (`weapons/WeaponCategory`, routed by `PlayerInventory`):
+
+| Slot | Box | Category | Holds |
+|---|---|---|---|
+| 0 | Box 1 (BIG, active) | PRIMARY | any one of SMG / SG / MG / Rifle / Sniper / DMR |
+| 1 | Box 2 | PRIMARY | any second primary — any combination, rifle + rifle allowed |
+| 2 | Box 3 | PISTOL | one pistol only (Glock / M1911 / Desert Eagle class) |
+| 3 | Box 4 | MELEE / FIST | knife / pan / machete, or bare FIST when empty (no ammo) |
+
+Rules: Box 1 is the active weapon (fires on FIRE). Tap a box → it becomes active
+(A2). Slot counts live in `Constants` (`WEAPON_SLOT_COUNT` 4, `PRIMARY_SLOTS` 2,
+`Pistol_SLOTS` 1, `MELEE_SLOTS` 1). Melee numbers for master M23: fist 10 damage,
+knife 30, cooldown 2.0 s, range 1.5 m. Pickup priority (master M12): empty Box 1 →
+Box 1, else empty Box 2 → Box 2, else the player picks which primary to drop; pistols
+and melee swap in place. MG/DMR/melee `WeaponType` rows arrive with master M22/M23 —
+until then `category()` maps the five existing types (pistol → PISTOL, rest → PRIMARY)
+and slot 3 is always fists.
 
 ---
 

@@ -91,7 +91,10 @@ public final class Constants {
     public static final float MAX_HEALTH = 100f;
     public static final float MAX_ARMOR = 100f;
     public static final float ARMOR_ABSORB = 0.5f;
-    public static final int MAX_WEAPONS = 2;
+    public static final int WEAPON_SLOT_COUNT = 4; // Box 1-2 primary, Box 3 pistol, Box 4 melee/fist
+    public static final int PRIMARY_SLOTS = 2;
+    public static final int PISTOL_SLOTS = 1;
+    public static final int MELEE_SLOTS = 1;
     public static final int MAX_ITEMS = 4;
     public static final float PICKUP_RADIUS = 1.5f;
 
