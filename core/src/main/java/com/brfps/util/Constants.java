@@ -129,6 +129,45 @@ public final class Constants {
     public static final float SPRINT_FOV_DEGREES = 85f;
     public static final float FOV_TRANSITION_TIME = 0.3f; // seconds, base <-> sprint FOV
 
+    // --- M34 (master) HUD phase A2: bars, weapon boxes, side buttons ---
+    // Bar sizes are fractions of min(width, height); the bars' top edge is a fraction
+    // of the height (R46). HP red, AR blue, ST yellow (SPEC: UI/HUD).
+    public static final float HUD_BAR_WIDTH = 0.30f;
+    public static final float HUD_BAR_HEIGHT = 0.028f;
+    public static final float HUD_BAR_GAP = 0.012f;
+    public static final float HUD_BARS_TOP_Y = 0.65f; // y-up fraction of the height
+    public static final float HUD_BAR_BG_ALPHA = 0.55f;
+    // Weapon panel: right side, below the perf/debug lines. Width is a fraction of the
+    // screen width, heights are fractions of the short side, top offset too (R46).
+    public static final float WEAPON_PANEL_WIDTH = 0.18f;
+    public static final float WEAPON_PANEL_TOP = 0.25f; // below the top edge (under the kill feed)
+    public static final float WEAPON_BOX1_HEIGHT = 0.105f; // big box: the active weapon
+    public static final float WEAPON_BOX_SMALL_HEIGHT = 0.07f; // boxes 2-3: name + ammo
+    public static final float WEAPON_BOX_FIST_HEIGHT = 0.055f; // box 4: name only
+    public static final float WEAPON_BOX_GAP = 0.01f;
+    public static final float WEAPON_PANEL_BG_ALPHA = 0.55f;
+    // RELOAD + SCOPE (right, level 2 of the button stack: same row as SLP) and PACK
+    // + MEDI (left, below the bars): same diameter as the other small buttons (R46).
+    public static final float HUD_SIDE_BUTTON_SIZE = 0.13f;
+    public static final float HUD_SIDE_BUTTON_BOTTOM = 0.35f; // y-up, fraction of short side
+    // Starting loadout (SPEC: Shooting): a full pistol plus bonus reserve and medkits.
+    public static final int STARTING_RESERVE_PISTOL = 60;
+    public static final int STARTING_MEDKITS = 3;
+    // Spawn clearance: a spawn whose resolve push is shorter than this is open ground.
+    public static final float SPAWN_CLEARANCE = 0.6f; // meters of allowed push-out
+
+    // --- M34 (master) HUD phase A3: minimap, compass, kill feed (all R46) ---
+    public static final float MINIMAP_SIZE = 0.26f; // diameter, fraction of short side
+    public static final float MINIMAP_ZOOM = 3.0f; // tap toggles whole-map / zoomed
+    public static final int MINIMAP_DOTS = 48; // safe-zone ring dots
+    public static final float COMPASS_WIDTH = 0.40f; // fraction of screen width
+    public static final float COMPASS_HEIGHT = 0.055f; // fraction of short side
+    public static final float COMPASS_RANGE_DEGREES = 120f; // visible window (+/-60)
+    public static final int KILL_FEED_COUNT = 4; // entries kept
+    public static final float KILL_FEED_TIME = 5.0f; // seconds each entry stays
+    public static final float KILL_FEED_LINE_HEIGHT = 0.035f; // fraction of short side
+    public static final float KILL_FEED_TOP = 0.09f; // below the top edge, x short side
+
     // --- M4 (master) shooting: hitscan, bullet holes, crosshair, ammo HUD ---
     // Weapon stats themselves live in weapons/WeaponType.java (R7) — damage, fire
     // interval, magazine, range, reload time, recoil and the projectile flag. The
@@ -136,7 +175,7 @@ public final class Constants {
     // pool and the screen furniture are tuned here.
     public static final float DECAL_SIZE = 0.14f; // bullet hole quad, meters
     public static final float DECAL_OFFSET = 0.02f; // off the surface, avoids z-fighting
-    public static final float FIRE_BUTTON_SIZE = 0.18f; // trigger is bigger than JUMP/CRCH
+    public static final float FIRE_BUTTON_SIZE = 0.22f; // trigger is bigger than JUMP/CRCH
     public static final float HUD_AMMO_SCALE = 1.6f;
     public static final float HUD_AMMO_Y = 0.05f; // bottom-centre, fraction of height
     // Crosshair sizes are fractions of min(screenWidth, screenHeight) — R46.

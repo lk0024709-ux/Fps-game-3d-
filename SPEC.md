@@ -57,14 +57,16 @@ recoil values since M1; this table only started listing them with master M4, and
 exist yet (arms: master M20, sounds: master M13 — until then a generated beep stands
 in for every gun).
 
-Since master M4 the player spawns with a **Pistol** and a reserve of three magazines
-(36 rounds, `Weapon`'s constructor; ammo boxes arrive with master M12). An empty
-magazine reloads itself, `R` reloads on demand. Every weapon fires **one** hitscan ray
-today: the shotgun's per-pellet spread and the sniper's projectile drop both arrive
-with master M22 (all five weapons), which is what the enum's `isProjectile()` flag is
-for.
+Since master M4 the player spawns with a **Pistol** (full magazine; the constructor
+default reserve is three magazines, 36 rounds — ammo boxes arrive with master M12).
+Since M34 A2 the starting loadout is fixed in `PlayerInventory.defaultLoadout()`:
+pistol 12 + 60 reserve, selected, plus 3 medkits (`STARTING_RESERVE_PISTOL`,
+`STARTING_MEDKITS`). An empty magazine reloads itself, `R` / the RLD button reloads
+on demand. Every weapon fires **one** hitscan ray today: the shotgun's per-pellet
+spread and the sniper's projectile drop both arrive with master M22 (all five
+weapons), which is what the enum's `isProjectile()` flag is for.
 
-### Weapon slots (HUD Phase A1 data, A2 display, M12 pickup)
+### Weapon slots (HUD Phase A1 data, A2 display ✅, M12 pickup)
 
 Four boxes, fixed categories (`weapons/WeaponCategory`, routed by `PlayerInventory`):
 
@@ -75,8 +77,10 @@ Four boxes, fixed categories (`weapons/WeaponCategory`, routed by `PlayerInvento
 | 2 | Box 3 | PISTOL | one pistol only (Glock / M1911 / Desert Eagle class) |
 | 3 | Box 4 | MELEE / FIST | knife / pan / machete, or bare FIST when empty (no ammo) |
 
-Rules: Box 1 is the active weapon (fires on FIRE). Tap a box → it becomes active
-(A2). Slot counts live in `Constants` (`WEAPON_SLOT_COUNT` 4, `PRIMARY_SLOTS` 2,
+Rules: Box 1 is the active weapon (fires on FIRE); boxes 2-4 show the other slots in
+slot order (`WeaponPanel.slotForBox`). Tap a box → it becomes active (A2 ✅, keys
+1-4 / Q on desktop, PACK cycles). Slot counts live in `Constants`
+(`WEAPON_SLOT_COUNT` 4, `PRIMARY_SLOTS` 2,
 `Pistol_SLOTS` 1, `MELEE_SLOTS` 1). Melee numbers for master M23: fist 10 damage,
 knife 30, cooldown 2.0 s, range 1.5 m. Pickup priority (master M12): empty Box 1 →
 Box 1, else empty Box 2 → Box 2, else the player picks which primary to drop; pistols
@@ -128,17 +132,19 @@ re-decide that.
 | Crosshair (center) | 4 ticks + dot from `ui/Crosshair`, dims while reloading, **blooms open with the recoil offset** (M5) | M34 |
 | Hit marker | 4 diagonal ticks over the crosshair, 160 ms, on any world impact (`ui/HitMarker`, M5) | M36 (kill/damage colours) |
 | Muzzle flash | screen-space glow + star, 70 ms, anchored at a fixed screen fraction (`ui/MuzzleFlash`, M5) | **M20** — moves to the weapon's world-space muzzle attach point |
-| Health / armor / stance | top-left text `HP 100 | AR 0 | STAND` | M34 (bars) |
-| Ammo counter | bottom-center text `Pistol 12 / 36`, `Pistol RELOADING 70%` | M34 |
+| Health / armor / stance | HP/AR/ST bars left (`ui/HudBars`, M34 A2) + `STAND` bottom-left | M34 ✅ (bars) |
+| Ammo counter | bottom-center `Pistol 12 / 60`, `RELOADING 70%`, bare `FIST` (M34 A2) | M34 ✅ |
+| Weapon boxes | Box 1 BIG = active (name + ammo + AUTO/SEMI), boxes 2-4 the rest (`ui/WeaponPanel`, M34 A2) | M34 ✅ |
 | Virtual joystick | left half, appears under the thumb (`ui/VirtualJoystick`) | M7 (polish) |
 | Touch-look area | right half drag to aim, pitch clamped −80°..+80° | M7 |
-| Action buttons | **FIRE** (large), **JUMP**, **CRCH** bottom-right | M5a layout, M12 adds pickup/switch |
+| Action buttons | **FIRE** 0.22 (M34 A2), **JUMP**, **CRCH**, **SPR**, **SIT**, **SLP** + **RLD** / **PACK** / **MEDI x3** (`input/HudButtons`, M34 A2); **SCOPE** greyed | M22 (scope), M12 (pickup) |
 | Perf line `FPS | DC | Tri` (+ `holes`) | top-right, debug builds | removed for release (R43) |
-| Position / collider / shot / recoil readout + control hint | top-right + top-left second lines, debug builds | removed for release |
-| Minimap (top-left) with safe-zone circle | — | M35 |
-| Player counter (top-center, `7 alive`) | — | M11 |
-| Kill feed (top-right) | — | M11 |
-| Reload / pickup / weapon-switch buttons | auto-reload + `R` key for now | M12, M22 |
+| Position / collider / shot / recoil readout + control hint | bottom-left stack above stance, debug builds (M34 A3) | removed for release |
+| Minimap (top-left) with safe-zone circle | disc + buildings + dotted ring + yaw arrow, tap/`M` zoom (`ui/MinimapView`, M34 A3) | M35 ✅ (early, inside M34) |
+| Compass (top-center) | 8-letter strip + gold caret (`ui/CompassBar`, M34 A3) | M34 ✅ |
+| Player counter (top-center, `7 alive`) | `10 ALIVE` under the compass (M34 A3) | M11 (loop still pending) |
+| Kill feed (top-right) | last 4, 5 s fade, empty until M11 (`ui/KillFeed`, M34 A3) | M11 (events) |
+| Reload / pickup / weapon-switch buttons | **RLD** button + `R`, boxes / `1-4` / `Q` / **PACK** switch (M34 A2); pickup is M12 | M12 (pickup) |
 
 ---
 
@@ -321,6 +327,16 @@ milestone that fixes it (R49).
     Anything new that wants to move the view (head bob M6, damage punch, vehicle shake)
     must go through the same call — writing into `yaw`/`pitch` would break the full
     recovery guarantee the user asked for.
+23. **Medkits heal instantly** (`HudDataBinder.consumeInput`, M34 A2). SPEC says 3 s
+    use time with a progress ring — that timing arrives with master M12/M13; the
+    consume + heal path itself works and the MEDI button greys out at zero.
+24. **`input/TouchInputHandler.java` is at 300/300 lines** (R13). The next touch
+    feature must go into `HudButtons` (same package) or a new class, never inline.
+25. **The kill feed is empty and the zone ring is display-only** (M34 A3). No damage
+    source exists yet (bots M10, match loop M11), so `KillFeed.addKill` has no caller
+    and the zone never hurts — and note the town spawn (75, 0) sits OUTSIDE the 60 m
+    starting ring, so M11 must re-centre/resize the ring or move spawns before damage
+    goes live.
 
 ## Performance Budget
 
@@ -444,7 +460,7 @@ has no separate repo row (its work is folded into the listed one).
 | M9 | **M2b** | 5+ buildings with interiors → town + village kit | ✅ done |
 | **M2b.5** | — (new, user request) | House **asset** integration: real models replace the procedural kit, one building first then all 32 | planned, waiting for the asset drop |
 | M10 | M7a | 3 bots (patrol + shoot) | not started — needs M3, M4 |
-| M11 | M8 | Match loop (win/lose/restart) | not started |
+| M11 | M8 | Match loop (win/lose/restart) | alive counter ✅ inside M34 A3; the loop itself not started |
 | M12 | M6a, M6b | Loot + inventory | not started |
 | M13 | — (new: sound pass) | Sound pass (all SFX via `SoundManager`) | not started |
 | M14 | M2b (+ M2d props) | Full town: 20 buildings + roads + props | buildings ✅, props pending |
@@ -467,9 +483,9 @@ has no separate repo row (its work is folded into the listed one).
 | M31 | M4 | Landing system (plane, parachute, drop) | not started |
 | M32 | M9a | Main menu | not started |
 | M33 | M9a | Lobby (loadout, character, map select) | not started |
-| M34 | M5a | In-game HUD | not started |
-| M35 | M5a | Minimap + safe zone circle | not started |
-| M36 | M9c | Kill feed + damage numbers | not started |
+| M34 | M5a | In-game HUD | ✅ A1 (PR #5) + A2 (bars/boxes/buttons) + A3 (minimap/compass/feed) |
+| M35 | M5a | Minimap + safe zone circle | ✅ done early inside M34 A3 (disc + zone ring; fullscreen map = Phase B) |
+| M36 | M9c | Kill feed + damage numbers | feed UI ✅ inside M34 A3 (empty until M11); damage numbers pending |
 | M37 | M9c | Post-match screen | not started |
 | M38 | M10 | Graphics tiers | not started |
 | M39 | M11 | Optimization pass | not started |

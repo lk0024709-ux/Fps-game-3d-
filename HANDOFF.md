@@ -568,3 +568,96 @@ is floating/sunken/mis-scaled against its 6×4×6 reference, the player still co
 all of them (walk the town in first person), doorways still line up with the walkable
 gaps, draw calls stay under 60, and both an editor-view and a first-person screenshot are
 attached to the PR.
+
+---
+
+## M34 (master) — HUD phase A2: bars + weapon boxes + side buttons, loadout + spawn fixes
+
+Date: 2026-09-13
+Model: not recorded (Arena session `01a09b2c`)
+Status: ✅ Complete
+Track: **B** (feel / combat / systems) — HUD.
+Sequence: **M34-A2 (master) = after M34-A1 (master)** (A1 merged as PR #5 with no
+  HANDOFF entry of its own; this entry covers A2 only).
+
+Files added:
+· `ui/TouchButton.java` (56 L) — reusable circular button (NORMAL/ACTIVE/DISABLED) + shared hit test
+· `ui/HudBars.java` (92 L) — HP/AR/ST bars left, tags + cur/max values, zero alloc
+· `ui/WeaponPanel.java` (194 L) — 4 boxes (Box 1 BIG = active + ammo + AUTO/SEMI, rest in slot order) + tap mapping
+· `ui/HudDataBinder.java` (218 L) — HUD snapshot fill, slot/medi input consume, spawn clearance, screenshot, shot fan-out
+· `input/HudButtons.java` (162 L) — RLD/PACK/MEDI buttons (SCOPE greyed) + box-tap routing for touch
+
+Files modified:
+· `screens/GameScreen.java` (271 → 198 L) — inventory + zone owned, wiring moved to the binder, effect order input → taps → look → move → recoil → fov → shake → apply → weapons
+· `weapons/WeaponController.java` — inventory-backed, fist-safe (null = fists, no ray, impact cleared); all carried guns tick
+· `player/PlayerInventory.java` — `defaultLoadout()` (pistol 12/60 selected + 3 medkits), `medCount()`/`itemCount()`
+· `weapons/Weapon.java` — `setReserveAmmo()`; `weapons/WeaponType.java` — `fireMode()` (SMG/RIFLE AUTO, rest SEMI)
+· `input/InputState.java` — `weaponSlot`/`cycleWeapon`/`mediPressed`; `DesktopInputHandler` — 1-4/Q/H keys
+· `input/TouchInputHandler.java` (299/300 L) — delegates A2 widgets to HudButtons, draws via TouchButton
+· `input/InputManager.java` — medCount render param, active-slot passthrough, help text
+· `ui/HudData.java` — slot arrays + fist/med/yaw/alive/zone fields (yaw/alive/zone filled already for A3)
+· `ui/MatchHud.java` — composes bars + panel, stance to bottom-left, bare "FIST" ammo line
+· `util/Constants.java` — FIRE 0.18 → 0.22, A2 layout block, starting loadout, spawn clearance
+· `SPEC.md` — loadout, slot rules (Box 1 = active), HUD table, M34 mapping row, known issues 23-24
+
+What works:
+· Spawn with pistol 12/60 + fists, tap any box (or 1-4/Q/PACK) to switch; RLD/`R` reloads, MEDI/`H` spends a medkit for +50 HP (instant — 3 s timing is M12/M13), SCOPE greyed to M22.
+· Spawn clearance: first spawn that resolves with < 0.6 m push wins (else first pushed out), facing the map centre — no more wall-corner spawn.
+· All HUD in one batch (R28), zero render-loop allocation (R6/R30), every size viewport-relative (R46), all files ≤ 300 L (R13).
+
+What's pending:
+· M34 A3 (same branch, next commit): minimap + compass + alive counter + kill feed; debug/help lines move bottom-left.
+· Phone test on this APK: bars/boxes/buttons visible, box tap switches, medi heals, no overlap at 16:9/18:9.
+
+Known issues:
+· Medkits heal instantly (SPEC: 3 s use time) — M12/M13 adds the timing (SPEC #23).
+· `TouchInputHandler` is at 300/300 lines — next touch feature goes to `HudButtons` (SPEC #24).
+
+Next milestone: **M34-A3 (master)** — HUD phase A3 (minimap, compass, alive counter, kill feed)
+Suggested model: any (same session continues)
+Notes for next model:
+· `HudData` already carries yaw/alive/zone and the binder fills them; A3 only adds the widgets + `WEAPON_PANEL_TOP` 0.13 → 0.25 (room for the feed) + `MinimapView`/`CompassBar`/`KillFeed` + `InputState.mapTapped`.
+· RLD/SCOPE sit at stack level 2 (same row as SLP); the A3 panel bottom must stay above 0.48 short-side or it covers them.
+· No JDK in the sandbox — `/tmp/check_a2.py` pattern (line limits, braces, Constants refs, import resolve) before every push, then CI (R18).
+CI: run `34763723371` (push, branch `arena/01a09b2c-fps-game-3d`) — ✅ green, artifact `brfps-debug-apk` 8 780 736 bytes.
+
+---
+
+## M34 (master) — HUD phase A3: minimap + compass + alive counter + kill feed
+
+Date: 2026-09-13
+Model: not recorded (Arena session `01a09b2c`)
+Status: ✅ Complete
+Track: **B** (feel / combat / systems) — HUD.
+Sequence: **M34-A3 (master) = after M34-A2 (master)** (same branch, same session).
+
+Files added:
+· `ui/MinimapView.java` (166 L) — top-left disc: baked building footprints, dotted zone ring, yaw arrow (north-up), tap/`M` whole/3x zoom toggle
+· `ui/CompassBar.java` (113 L) — top-centre 8-letter strip + gold caret + `10 ALIVE` counter below
+· `ui/KillFeed.java` (64 L) — top-right last-4 `killer > victim`, 5 s + 1 s fade-out, empty renders nothing
+
+Files modified:
+· `screens/GameScreen.java` (198 → 199 L) — owns feed + minimap, ticks them, passes to the HUD
+· `ui/MatchHud.java` — composes compass/minimap/feed; debug + help moved to a bottom-left stack above the stance
+· `input/InputState.java` — `mapTapped`; `input/HudButtons.java` — minimap disc hit-test + queue; `DesktopInputHandler` — `M` key
+· `input/InputManager.java` — help text; `util/Constants.java` — A3 layout block, `WEAPON_PANEL_TOP` 0.13 → 0.25 (panel under the feed)
+· `SPEC.md` — HUD table, M34/M35/M36/M11 mapping rows, known issue 25
+
+What works:
+· Full HUD in one batch: bars, 4 weapon boxes, RLD/PACK/MEDI (+ greyed SCOPE), compass + alive, minimap + zone ring, kill feed slot, stance/ammo/perf/debug. No new draw calls (all in the HUD batch), zero render-loop allocation.
+· Minimap tap or `M` toggles whole-map / 3x player-centred zoom; buildings + zone ring clip to the disc; arrow tracks aim yaw.
+
+What's pending:
+· Phone test on this APK: minimap/compass/feed positions at 16:9/18:9, zoom toggle, no overlap with boxes/buttons.
+· Kill events (M11), zone damage + ring re-centre (M11 — town spawn is outside the 60 m ring, SPEC #25), fullscreen map (Phase B).
+
+Known issues:
+· Feed is empty until M11 — by design (no kills exist yet), not a bug; `addKill` is the API.
+· Portrait phones: compass strip (0.40 W) and minimap nearly touch — verified by math, needs an eyeball on device.
+
+Next milestone: user's choice (R4 — wait for "go"). HUD track M34 is now complete (A1+A2+A3).
+Suggested model: any
+Notes for next model:
+· `TouchInputHandler` still 300/300 — untouched by A3 on purpose; route new touch widgets through `HudButtons`.
+· RLD/SCOPE row top is 0.48 short-side; anything hung under the weapon panel must stay above it (panel bottom is 0.50).
+CI: run `34763996383` (push, branch `arena/01a09b2c-fps-game-3d`) — ✅ green, artifact `brfps-debug-apk` 8 783 410 bytes.

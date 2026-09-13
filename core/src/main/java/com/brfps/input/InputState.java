@@ -39,8 +39,20 @@ public class InputState {
     /** Trigger held this frame (FIRE button or left mouse button). */
     public boolean fire;
 
-    /** Reload requested this frame (R key; touch reloads automatically when empty). */
+    /** Reload requested this frame (R key or RLD button; also auto when empty). */
     public boolean reload;
+
+    /** Weapon slot tapped this frame (HUD boxes or keys 1-4); -1 means none. */
+    public int weaponSlot = -1;
+
+    /** Cycle to the next carried weapon (PACK button or Q key). */
+    public boolean cycleWeapon;
+
+    /** Use one medkit this frame (MEDI button or H key). */
+    public boolean mediPressed;
+
+    /** Minimap tapped this frame (touch disc or M key): toggles the zoom. */
+    public boolean mapTapped;
 
     /** Clears every field; called at the start of each frame. */
     public void reset() {
@@ -56,5 +68,9 @@ public class InputState {
         analogMove = false;
         fire = false;
         reload = false;
+        weaponSlot = -1;
+        cycleWeapon = false;
+        mediPressed = false;
+        mapTapped = false;
     }
 }

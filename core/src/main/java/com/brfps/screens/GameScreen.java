@@ -1,13 +1,10 @@
 package com.brfps.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.brfps.BrFpsGame;
 import com.brfps.input.InputManager;
@@ -15,55 +12,53 @@ import com.brfps.input.InputState;
 import com.brfps.player.FirstPersonCamera;
 import com.brfps.player.MovementController;
 import com.brfps.player.Player;
-import com.brfps.player.PlayerStats;
+import com.brfps.player.PlayerInventory;
 import com.brfps.ui.HitMarker;
 import com.brfps.ui.HudData;
+import com.brfps.ui.HudDataBinder;
+import com.brfps.ui.KillFeed;
 import com.brfps.ui.MatchHud;
+import com.brfps.ui.MinimapView;
 import com.brfps.ui.MuzzleFlash;
 import com.brfps.util.Constants;
-import com.brfps.util.ScreenshotUtil;
-import com.brfps.weapons.Weapon;
 import com.brfps.weapons.WeaponController;
 import com.brfps.weapons.WeaponFeel;
-import com.brfps.weapons.WeaponType;
 import com.brfps.world.Arena;
 import com.brfps.world.BuildingCollider;
 import com.brfps.world.ImpactDecals;
 import com.brfps.world.MapLayout;
 import com.brfps.world.MapRegistry;
-import com.brfps.world.SpawnPoint;
+import com.brfps.world.SafeZone;
 
 /**
- * The playable first-person screen (master M3-M5, repo M3a-M3c / M5a-M5c): loads the
- * map, drops the player on a spawn point, then runs the frame in the fixed effect order
- * <b>look -> movement -> recoil -> fov -> shake -> camera apply -> weapons</b>, so movement
- * always sees the base yaw and a shot can never push the player around. Weapon feel
- * lives in {@code weapons.WeaponFeel} and the HUD in {@code ui.MatchHud} to keep this
- * class inside the 300-line limit (R13). Bots and the match loop arrive later.
+ * The playable match screen (M3-M5 + M34 A1-A3): input -&gt; taps -&gt; look -&gt;
+ * move -&gt; recoil -&gt; fov -&gt; shake -&gt; apply -&gt; weapons (R13: thin screen).
  */
 public class GameScreen implements Screen {
 
     private final BrFpsGame game;
     private final PerspectiveCamera camera;
-    private final Arena arena;
-    private final Player player;
-    private final FirstPersonCamera view;
-    private final MovementController movement;
-    private final ImpactDecals decals;
-    private final WeaponController weapons;
+    private final PlayerInventory inventory = new PlayerInventory();
+    private final SafeZone zone = new SafeZone(0f, 0f);
     private final WeaponFeel feel = new WeaponFeel();
     private final MuzzleFlash muzzleFlash = new MuzzleFlash();
     private final HitMarker hitMarker = new HitMarker();
+    private final KillFeed killFeed = new KillFeed();
     private final InputManager input = new InputManager();
     private final InputState inputState = new InputState();
     private final MatchHud hud = new MatchHud();
     private final HudData hudData = new HudData();
     private final SpriteBatch batch = new SpriteBatch();
     private final ScreenViewport viewport = new ScreenViewport();
+    private Arena arena;
+    private Player player;
+    private FirstPersonCamera view;
+    private MovementController movement;
+    private ImpactDecals decals;
+    private WeaponController weapons;
+    private HudDataBinder binder;
+    private MinimapView minimap;
     private final boolean loadFailed;
-
-    private float elapsed;
-    private boolean screenshotTaken;
 
     public GameScreen(BrFpsGame game) {
         this.game = game;
@@ -71,6 +66,7 @@ public class GameScreen implements Screen {
                 Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.near = Constants.NEAR_PLANE;
         camera.far = Constants.FAR_PLANE;
+        inventory.defaultLoadout();
 
         MapRegistry registry = new MapRegistry();
         registry.load();
@@ -79,53 +75,33 @@ public class GameScreen implements Screen {
         if (layout == null) {
             Gdx.app.error("GameScreen", "no map could be loaded (id=" + mapId + ")");
             loadFailed = true;
-            arena = null;
-            player = null;
-            view = null;
-            movement = null;
-            decals = null;
-            weapons = null;
+            hudData.loadFailed = true;
             return;
         }
         loadFailed = false;
 
         arena = new Arena(layout);
+        minimap = new MinimapView(layout.buildings, layout.size);
         player = new Player();
-        spawnPlayer();
         view = new FirstPersonCamera(camera);
         BuildingCollider collider = new BuildingCollider(layout.buildings, layout.size);
         movement = new MovementController(player, collider, layout.size);
         decals = new ImpactDecals();
-        Weapon pistol = new Weapon(WeaponType.PISTOL);
-        weapons = new WeaponController(pistol, collider, decals);
+        weapons = new WeaponController(inventory, collider, decals);
+        binder = new HudDataBinder(player, inventory, weapons, movement, view,
+                arena, decals, zone);
+        binder.spawnWithClearance(arena.getSpawnPoints(), collider);
 
         hudData.helpText = input.helpText();
         hudData.colliderBoxes = collider.getWallCount() + collider.getPlinthCount();
     }
 
-    /** Drops the player on the first spawn point, facing into the map. */
-    private void spawnPlayer() {
-        Array<SpawnPoint> spawns = arena.getSpawnPoints();
-        if (spawns.size > 0) {
-            SpawnPoint spawn = spawns.first();
-            player.spawn(spawn.x, spawn.z);
-        } else {
-            player.spawn(0f, 0f);
-        }
-    }
-
     @Override
-    public void show() {
-        Gdx.input.setCatchBackKey(true);
-        elapsed = 0f;
-        screenshotTaken = false;
-    }
+    public void show() { Gdx.input.setCatchBackKey(true); }
 
     @Override
     public void render(float delta) {
-        elapsed += delta;
-        if (Gdx.input.isKeyJustPressed(Input.Keys.BACK)
-                || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+        if (HudDataBinder.backPressed()) {
             dispose();
             game.setScreen(new MainMenuScreen(game));
             return;
@@ -144,36 +120,36 @@ public class GameScreen implements Screen {
         }
 
         renderHud();
-        maybeCaptureScreenshot();
+        if (!loadFailed) {
+            binder.maybeCaptureScreenshot(delta, loadFailed);
+        }
     }
 
     /** One frame of gameplay, in the effect order documented on the class. */
     private void updateGameplay(float delta) {
+        input.setActiveSlot(hudData.activeSlot);
         input.update(inputState);
+        binder.consumeInput(inputState);
         view.look(inputState.lookDX, inputState.lookDY, input.lookSensitivity());
         movement.update(delta, inputState, view.getYaw()); // base yaw: before any offset
         feel.update(delta, inputState.fire); // recoil recovers first, then shake decays
+        zone.update(delta);
         view.updateFov(delta, movement.isSprinting());
         muzzleFlash.update(delta);
         hitMarker.update(delta);
+        killFeed.update(delta);
+        if (inputState.mapTapped) {
+            minimap.toggleZoom();
+        }
         view.apply(player, feel.getShake().offsetX(),
                 feel.getRecoil().pitchOffset() + feel.getShake().offsetY(),
                 feel.getShake().roll());
         weapons.update(delta, inputState.fire, inputState.reload,
                 camera.position, camera.direction);
         if (weapons.firedThisFrame()) {
-            onShot();
+            binder.onShotFired(feel, muzzleFlash, hitMarker, game.getShotBeep(),
+                    weapons.getLastShotRecoil(), weapons.getLastHit().hit);
         }
-    }
-
-    /** One shot event: camera kick, flash, hit marker and the placeholder crack. */
-    private void onShot() {
-        feel.onShot(weapons.getLastShotRecoil());
-        muzzleFlash.fire();
-        if (weapons.getLastHit().hit) {
-            hitMarker.show();
-        }
-        game.getShotBeep().play();
     }
 
     /** Touch widgets first, then the match HUD on top of them. */
@@ -182,61 +158,18 @@ public class GameScreen implements Screen {
         batch.setProjectionMatrix(viewport.getCamera().combined);
         float worldWidth = viewport.getWorldWidth();
         float worldHeight = viewport.getWorldHeight();
-        fillHudData();
+        hudData.framesPerSecond = Gdx.graphics.getFramesPerSecond();
+        if (!loadFailed) {
+            binder.bind(hudData, loadFailed, feel.getBloom(),
+                    feel.getRecoil().pitchOffset());
+        }
         input.setSprinting(!loadFailed && movement.isSprinting());
         batch.begin();
         input.render(batch, game.getAssets().circle(), game.getAssets().font(),
-                worldWidth, worldHeight);
+                worldWidth, worldHeight, hudData.medCount);
         hud.render(batch, game.getAssets(), hudData, muzzleFlash, hitMarker,
-                worldWidth, worldHeight);
+                killFeed, minimap, worldWidth, worldHeight);
         batch.end();
-    }
-
-    /** Copies this frame's values into the reusable HUD snapshot (no allocation, R6). */
-    private void fillHudData() {
-        hudData.framesPerSecond = Gdx.graphics.getFramesPerSecond();
-        if (loadFailed) {
-            hudData.loadFailed = true;
-            hudData.drawCalls = 0;
-            hudData.triangles = 0;
-            return;
-        }
-        hudData.loadFailed = false;
-        PlayerStats stats = player.getStats();
-        Vector3 feet = player.getPosition();
-        Weapon weapon = weapons.getWeapon();
-        hudData.health = Math.round(stats.getHealth());
-        hudData.armor = Math.round(stats.getArmor());
-        hudData.crouching = player.isCrouching();
-        hudData.sitting = player.isSitting();
-        hudData.prone = player.isProne();
-        hudData.stamina = player.getStamina().getStamina();
-        hudData.sprinting = movement.isSprinting();
-        hudData.onGround = player.isOnGround();
-        hudData.positionX = feet.x;
-        hudData.positionY = feet.y;
-        hudData.positionZ = feet.z;
-        hudData.weaponName = weapon.getType().displayName();
-        hudData.ammoInMagazine = weapon.getAmmoInMagazine();
-        hudData.reserveAmmo = weapon.getReserveAmmo();
-        hudData.reloading = weapon.isReloading();
-        hudData.reloadProgress = weapon.getReloadProgress();
-        hudData.drawCalls = arena.getDrawCalls() + decals.getDrawCalls();
-        hudData.triangles = arena.getTrianglesRendered() + decals.getTrianglesRendered();
-        hudData.decals = decals.getUsedCount();
-        hudData.shotsFired = weapons.getShotsFired();
-        hudData.shotsOnTarget = weapons.getShotsOnTarget();
-        hudData.lastHitDistance = weapons.getLastHitDistance();
-        hudData.crosshairBloom = feel.getBloom();
-        hudData.recoilPitch = feel.getRecoil().pitchOffset();
-    }
-
-    private void maybeCaptureScreenshot() {
-        if (screenshotTaken || loadFailed || elapsed < Constants.SCREENSHOT_DELAY) {
-            return;
-        }
-        screenshotTaken = true;
-        ScreenshotUtil.capture("debug/firstperson.png");
     }
 
     @Override
@@ -247,16 +180,11 @@ public class GameScreen implements Screen {
     }
 
     @Override
-    public void pause() {
-    }
-
+    public void pause() { }
     @Override
-    public void resume() {
-    }
-
+    public void resume() { }
     @Override
-    public void hide() {
-    }
+    public void hide() { }
 
     @Override
     public void dispose() {
