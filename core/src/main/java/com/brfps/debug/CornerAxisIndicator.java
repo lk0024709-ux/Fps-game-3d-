@@ -57,9 +57,10 @@ public class CornerAxisIndicator {
         ortho.position.set(0f, 0f, 0f);
         ortho.update();
         rotationOnly.set(world.view);
-        rotationOnly.val[Matrix4.M03] = 0f;
-        rotationOnly.val[Matrix4.M13] = 0f;
-        rotationOnly.val[Matrix4.M23] = 0f;
+        // Matrix4.val is column-major: indices 12, 13 and 14 hold the translation.
+        rotationOnly.val[12] = 0f;
+        rotationOnly.val[13] = 0f;
+        rotationOnly.val[14] = 0f;
         projView.set(ortho.combined).mul(rotationOnly);
         shader.bind(projView);
         mesh.render(shader.program(), GL20.GL_LINES);

@@ -26,6 +26,7 @@ public class EditorCamera {
     private final PerspectiveCamera camera;
     private final Vector3 forward = new Vector3();
     private final Vector3 right = new Vector3();
+    private final Vector3 step = new Vector3();
     private final boolean[] wasTouched = new boolean[MAX_POINTERS];
     private final float[] lastX = new float[MAX_POINTERS];
     private final float[] lastY = new float[MAX_POINTERS];
@@ -83,8 +84,10 @@ public class EditorCamera {
         float speed = sprint() ? Constants.EDITOR_SPRINT_SPEED : Constants.EDITOR_SPEED;
         direction(forward);
         right.set(MathUtils.cosDeg(yaw + 90f), 0f, MathUtils.sinDeg(yaw + 90f));
-        camera.position.addScaled(forward, moveY * speed * dt);
-        camera.position.addScaled(right, moveX * speed * dt);
+        step.set(forward).scl(moveY * speed * dt);
+        camera.position.add(step);
+        step.set(right).scl(moveX * speed * dt);
+        camera.position.add(step);
         camera.position.y += vertical * speed * dt;
         clampPosition();
         apply();
@@ -283,7 +286,7 @@ public class EditorCamera {
         float cosPitch = MathUtils.cosDeg(pitch);
         out.set(MathUtils.cosDeg(yaw) * cosPitch, MathUtils.sinDeg(pitch),
                 MathUtils.sinDeg(yaw) * cosPitch);
-        if (out.isZero()) {
+        if (out.x == 0f && out.y == 0f && out.z == 0f) {
             out.set(1f, 0f, 0f);
         } else {
             out.nor();
