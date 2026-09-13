@@ -38,6 +38,20 @@ public final class Constants {
     public static final float ORBIT_SPEED = 12f; // degrees per second
     public static final float SCREENSHOT_DELAY = 5f; // seconds into GameScreen
 
+    // --- M2b buildings (shared dimensions; per-type sizes live in BuildingType) ---
+    public static final float WALL_THICKNESS = 0.2f;
+    public static final float DOOR_WIDTH = 1.1f;
+    public static final float DOOR_HEIGHT = 2.1f;
+    public static final float WINDOW_WIDTH = 1.0f;
+    public static final float WINDOW_HEIGHT = 1.0f;
+    public static final float WINDOW_SILL = 1.1f;
+    public static final float ROOF_PITCH = 0.55f; // rise per half-depth
+    public static final float ROOF_OVERHANG = 0.35f;
+    public static final float ROOF_SLAB = 0.25f; // flat-roof slab thickness
+    public static final float BUILDING_FLOOR_OFFSET = 0.06f; // avoids z-fighting with terrain
+    public static final float FLOATING_FACE_MIN_Y = 0.05f; // boxes above this get a bottom face
+    public static final int BUILDING_VERTEX_LIMIT = 24000; // flush a mesh before short-index overflow
+
     // --- Player ---
     public static final float EYE_HEIGHT = 1.6f;
     public static final float CROUCH_EYE_HEIGHT = 1.0f;

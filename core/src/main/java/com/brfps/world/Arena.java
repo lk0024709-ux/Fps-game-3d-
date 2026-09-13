@@ -48,6 +48,7 @@ public class Arena {
     private final Mesh markerMesh;
     private final Mesh spawnMesh;
     private final Mesh gridMesh;
+    private final BuildingBatcher buildings;
     private int drawCalls;
     private int trianglesRendered;
 
@@ -67,6 +68,7 @@ public class Arena {
         markerMesh = Constants.DEBUG_SHOW_ZONE_MARKERS ? buildZoneMarkers() : null;
         spawnMesh = Constants.DEBUG_SHOW_SPAWN_MARKERS ? buildSpawnMarkers() : null;
         gridMesh = Constants.DEBUG_SHOW_CHUNK_GRID ? buildChunkGrid() : null;
+        buildings = new BuildingBatcher(layout.buildings);
     }
 
     /** Renders the whole static world; call once per frame after clearing. */
@@ -81,6 +83,9 @@ public class Arena {
         draw(markerMesh, GL20.GL_TRIANGLES);
         draw(spawnMesh, GL20.GL_TRIANGLES);
         draw(gridMesh, GL20.GL_LINES);
+        buildings.render(flatShader.program());
+        drawCalls += buildings.getDrawCalls();
+        trianglesRendered += buildings.getTrianglesRendered();
         // Translucent on top, without writing depth.
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -118,6 +123,7 @@ public class Arena {
             }
         }
         flatShader.dispose();
+        buildings.dispose();
     }
 
     private void draw(Mesh mesh, int primitiveType) {
