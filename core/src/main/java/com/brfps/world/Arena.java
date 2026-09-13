@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Mesh;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.ObjectMap;
@@ -48,6 +49,7 @@ public class Arena {
     private final Mesh markerMesh;
     private final Mesh spawnMesh;
     private final Mesh gridMesh;
+    private final BuildingBatcher buildings;
     private int drawCalls;
     private int trianglesRendered;
 
@@ -64,9 +66,13 @@ public class Arena {
         roadMesh = buildRoads();
         waterMesh = layout.water ? buildWaterPlane() : null;
         riverMesh = layout.rivers.size > 0 ? buildRivers() : null;
-        markerMesh = Constants.DEBUG_SHOW_ZONE_MARKERS ? buildZoneMarkers() : null;
-        spawnMesh = Constants.DEBUG_SHOW_SPAWN_MARKERS ? buildSpawnMarkers() : null;
-        gridMesh = Constants.DEBUG_SHOW_CHUNK_GRID ? buildChunkGrid() : null;
+        markerMesh = Constants.DEBUG_TOOLS_ENABLED && Constants.DEBUG_SHOW_ZONE_MARKERS
+                ? buildZoneMarkers() : null;
+        spawnMesh = Constants.DEBUG_TOOLS_ENABLED && Constants.DEBUG_SHOW_SPAWN_MARKERS
+                ? buildSpawnMarkers() : null;
+        gridMesh = Constants.DEBUG_TOOLS_ENABLED && Constants.DEBUG_SHOW_CHUNK_GRID
+                ? buildChunkGrid() : null;
+        buildings = new BuildingBatcher(layout.buildings);
     }
 
     /** Renders the whole static world; call once per frame after clearing. */
@@ -81,6 +87,9 @@ public class Arena {
         draw(markerMesh, GL20.GL_TRIANGLES);
         draw(spawnMesh, GL20.GL_TRIANGLES);
         draw(gridMesh, GL20.GL_LINES);
+        buildings.render(flatShader.program());
+        drawCalls += buildings.getDrawCalls();
+        trianglesRendered += buildings.getTrianglesRendered();
         // Translucent on top, without writing depth.
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -89,6 +98,11 @@ public class Arena {
         draw(waterMesh, GL20.GL_TRIANGLES);
         Gdx.gl.glDepthMask(true);
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    /** The world shader, still bound after render(): decals reuse it (Mesh.render never binds). */
+    public ShaderProgram worldShader() {
+        return flatShader.program();
     }
 
     /** Draw calls issued during the last render() (for the debug HUD). */
@@ -118,6 +132,7 @@ public class Arena {
             }
         }
         flatShader.dispose();
+        buildings.dispose();
     }
 
     private void draw(Mesh mesh, int primitiveType) {

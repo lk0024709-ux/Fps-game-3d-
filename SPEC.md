@@ -1,5 +1,8 @@
 # SPEC — Battle Royale FPS (Android)
 
+> Living document (R47). Read together with [`RULES.md`](RULES.md) (all 50 rules)
+> and [`HANDOFF.md`](HANDOFF.md) (what the last model did and what comes next).
+
 **Genre:** Battle Royale FPS
 **Players per match:** 1 human + 9 AI bots (later: scale toward 49 bots)
 **Match duration:** ~10 minutes, or until 1 player is left
@@ -37,16 +40,27 @@
 
 ## Weapons
 
-| Weapon | Damage | Fire rate | Magazine | Range | Type |
-|---|---|---|---|---|---|
-| Pistol | 15 | 300 ms | 12 | 40 m | hitscan |
-| SMG | 12 | 80 ms | 30 | 30 m | hitscan |
-| Rifle | 25 | 150 ms | 30 | 80 m | hitscan |
-| Shotgun | 60 | 800 ms | 6 | 15 m | hitscan |
-| Sniper | 90 | 1500 ms | 5 | 200 m | projectile with drop |
+| Weapon | Damage | Fire rate | Magazine | Range | Reload | Recoil | Type |
+|---|---|---|---|---|---|---|---|
+| Pistol | 15 | 300 ms | 12 | 40 m | 1.4 s | 1.2° | hitscan |
+| SMG | 12 | 80 ms | 30 | 30 m | 1.8 s | 1.0° | hitscan |
+| Rifle | 25 | 150 ms | 30 | 80 m | 2.2 s | 1.6° | hitscan |
+| Shotgun | 60 | 800 ms | 6 | 15 m | 2.6 s | 4.5° | hitscan |
+| Sniper | 90 | 1500 ms | 5 | 200 m | 3.0 s | 6.0° | projectile with drop |
 
 Implemented in `core/.../weapons/WeaponType.java` — that enum is the single
-source of truth for these numbers.
+source of truth for these numbers (fire rate is stored as the interval in seconds,
+recoil as the vertical kick in degrees per shot). The enum has carried the reload and
+recoil values since M1; this table only started listing them with master M4, and
+recoil is first *used* by master M5. `armsModelPath()` / `fireSoundPath()` in the same
+enum point at assets that do not exist yet (arms: master M20, sounds: master M13).
+
+Since master M4 the player spawns with a **Pistol** and a reserve of three magazines
+(36 rounds, `Weapon`'s constructor; ammo boxes arrive with master M12). An empty
+magazine reloads itself, `R` reloads on demand. Every weapon fires **one** hitscan ray
+today: the shotgun's per-pellet spread and the sniper's projectile drop both arrive
+with master M22 (all five weapons), which is what the enum's `isProjectile()` flag is
+for.
 
 ---
 
@@ -82,16 +96,25 @@ source of truth for these numbers.
 
 ## UI / HUD
 
-- Crosshair (center, reacts on hit)
-- Health bar + armor bar (bottom-left)
-- Ammo counter (bottom-right, `24 / 30`)
-- Minimap (top-left) with the safe-zone circle
-- Player counter (top-center, `7 alive`)
-- Kill feed (top-right)
-- Virtual joystick (left, movement)
-- Touch-look area (right half, drag to aim; pitch clamped -80°..+80°)
-- Action buttons (right): fire (large, bottom-right), jump, crouch, reload,
-  pickup, weapon switch
+Where each element is **today** (master M4) and which milestone finalizes it. The
+bottom-right corner belongs to the touch buttons, so the ammo counter sits
+bottom-center instead of bottom-right; the real scene2d HUD (master M34/M44) may
+re-decide that.
+
+| Element | Now | Finalized by |
+|---|---|---|
+| Crosshair (center) | 4 ticks + dot from `ui/Crosshair`, dims while reloading | M5 (reacts on hit), M34 |
+| Health / armor / stance | top-left text `HP 100 | AR 0 | STAND` | M34 (bars) |
+| Ammo counter | bottom-center text `Pistol 12 / 36`, `Pistol RELOADING 70%` | M34 |
+| Virtual joystick | left half, appears under the thumb (`ui/VirtualJoystick`) | M7 (polish) |
+| Touch-look area | right half drag to aim, pitch clamped −80°..+80° | M7 |
+| Action buttons | **FIRE** (large), **JUMP**, **CRCH** bottom-right | M5a layout, M12 adds pickup/switch |
+| Perf line `FPS | DC | Tri` (+ `holes`) | top-right, debug builds | removed for release (R43) |
+| Position / collider / shot readout + control hint | top-right + top-left second lines, debug builds | removed for release |
+| Minimap (top-left) with safe-zone circle | — | M35 |
+| Player counter (top-center, `7 alive`) | — | M11 |
+| Kill feed (top-right) | — | M11 |
+| Reload / pickup / weapon-switch buttons | auto-reload + `R` key for now | M12, M22 |
 
 ---
 
@@ -138,10 +161,16 @@ use Free Fire's own assets.
 with no textures or models. The river is a translucent strip until M2e carves
 the channel; the bridge arrives in M2d.
 
-**Models (`assets/models/`)** — all missing, `ModelBuilder.createBox` fallback:
+**Models (`assets/models/`)** — all missing, procedural fallback in use:
 `arms_pistol.g3dj`, `arms_rifle.g3dj`, `arms_smg.g3dj`, `arms_shotgun.g3dj`,
 `arms_sniper.g3dj`, `enemy_body.g3dj`, `arena.g3dj`, `loot_crate.g3dj`,
-`tree.g3dj`
+`tree.g3dj`. Buildings need **no** model files: since M9 the whole 8-building kit
+is generated as vertex-colored geometry by `world/BuildingFactory.java`
+(R25 placeholder strategy). Real building art only arrives with the M20 asset swap.
+
+**Map content still missing** (procedural, no files needed): village **well** and
+**crop fields** belong to the prop kit (master M18 / repo M2d), as does the bridge
+over the river.
 
 **Textures (`assets/textures/`)** — all missing, tinted 2×2 white fallback:
 `wall.png`, `floor.png`, `grass.png`, `enemy_skin.png`, `crosshair.png`,
@@ -157,51 +186,353 @@ the channel; the bridge arrives in M2d.
 
 ---
 
+## Known Issues
+
+Everything here is known and intentional unless marked **bug**. Each item names the
+milestone that fixes it (R49).
+
+1. **Playable and shooting, but nothing to shoot.** Since master M4 the player spawns
+   with a pistol, aims through a crosshair, fires hitscan rays that punch bullet holes
+   into walls, plinths and ground, and reloads. Damage is not applied to anything yet:
+   there are no bots (master M10 / repo M7a), no loot (M12) and no match loop (M11).
+   Recoil, muzzle flash, hit marker and screen shake are master M5 (repo M5c); gun
+   sounds are master M13.
+2. **Collision covers buildings only.** 173 CPU-side boxes (walls, door jambs,
+   partitions, temple plinth + steps) stop the player; the terrain is still flat, the
+   river and sea are not blockers, props do not exist yet, and roofs are unreachable.
+   Heightfield collision: master M8 (repo M2e). Prop collision: master M18 (M2d).
+3. **Debug overlays are ON**, but since master M2 they all hang off one master switch:
+   `Constants.DEBUG_TOOLS_ENABLED` (R43) gates the zone/spawn markers, the chunk grid,
+   the editor view and the screenshot helper's visibility. Flip that one boolean to
+   false for release. The three sub-flags still exist and should be folded away when
+   quality tiers land (master M38 / repo M10).
+4. **Doc ↔ code drift.** SPEC mentions systems that do not exist yet: `SoundManager`
+   (M6d), `LootSpawner` (M6a), `ChunkManager` (M2e), `BotController` (M7a),
+   `LocalSaveManager` (M6c). `enemies/BotDifficulty.java` is a placeholder for
+   `ai/BotProfile.java` — the package moves at M7c (R35/R36).
+5. **No local toolchain in the AI sandbox** (no JDK, no Android SDK): every build is
+   verified through GitHub Actions only (R18). Never claim a build passed without a
+   CI run id.
+6. **Texture size rule conflict.** R12 allows up to 2048; SPEC caps textures at
+   512×512 for mobile. Decision: the **512 cap stands**; R12 still enforces
+   power-of-two. Only UI atlases may exceed it, and only with the user's approval.
+7. **`assets/maps/desert.layout` does not exist** (M12). `index.json` lists one map.
+8. **River is a translucent strip**, not a carved channel; the bridge is missing.
+   Channel + heightfield: M2e. Bridge: M2d.
+9. **`ScreenshotUtil` writes to app-internal storage** 5 s after entering the world
+   (no permission needed). It is a dev aid and must be disabled in release builds (R43).
+10. **Milestone numbering existed in two schemes** (this repo's lettered ids and the
+    master prompt's M1–M47). Decided by the user on 2026-09-13: old commits keep
+    their repo ids, **new commits use master ids**, and docs always write both
+    (`M9 (master) = M2b (repo)`). See *Milestone Numbering* + *Milestone Mapping Table*.
+11. **Buildings have collision but no culling (M9 + M3).** 32 buildings are baked into
+    **one** mesh (6 188 vertices / 3 094 triangles) by `BuildingBatcher`, and
+    `BuildingCollider` mirrors the same geometry as 173 oriented boxes for the player.
+    There is no occlusion culling and no LOD yet — those arrive with master M19
+    (repo M2e). Interiors exist only for the large types
+    (`house_two_storey`, `shop`, `temple`, and later `warehouse`/`factory`/
+    `barracks`) — user decision 2026-09-13; small houses and huts are closed shells
+    with a door panel, so their doorway is blocked by a visual panel **and** by the
+    two jambs only where the panel is: a shell building is not enterable by design.
+12. **One house sits on the river bank.** `house_small` at (100, 6) is 0.25 m from
+    the river's 12 m band. Intentional for now; it must be moved or the bank must be
+    shaped when master M8/M19 (repo M2e) carves the channel to −1.5 m.
+13. **Editor view screen furniture is temporary.** The CAM button sits top-left (the
+    minimap wants that spot at master M35) and the UP/DN altitude buttons sit
+    bottom-right — the same corner the gameplay JUMP/CRCH buttons already use (master
+    M3). They never overlap in practice because the editor and the match are separate
+    screens, but the real HUD (master M34/M44) owns that corner from now on. Editor
+    furniture is debug-only and disappears with `DEBUG_TOOLS_ENABLED`.
+14. **Editor mode costs 3 extra draw calls** (grid, world axes, corner gizmo) — 11
+    total instead of 8. Editor mode only, never in a match.
+15. **Shop awnings overhang 1.5 m** past the front wall (and temple steps 1.8 m).
+    Placement was validated against roads/river/spawns including that overhang, so
+    keep the same margin when adding buildings: `python3`-style clearance ≥ 0 m from
+    any road strip, river band or spawn point.
+16. **Every weapon fires exactly one ray.** The shotgun's pellet spread and the
+    sniper's projectile drop are master M22 (all five weapons); until then
+    `WeaponType.projectile` is data only and the shotgun is a single 60-damage hitscan.
+17. **Bullet holes are world-only and finite.** 64 decals in a ring buffer (the oldest
+    is overwritten), placed on walls, plinths and ground — never on a bot, because
+    bots arrive with master M10 and will need their own impact feedback.
+18. **`ui.MatchHud` owns all HUD text** and `screens/GameScreen` only fills
+    `ui.HudData`. Keep it that way: GameScreen was at 292/300 lines before the split,
+    and R13 caps every file at 300.
+
+## Performance Budget
+
+Hard limits (R28–R31) and how the budget is spent. Measured values come from the
+in-game `FPS | DC | Tri` HUD.
+
+| Resource | Limit | M2a | M9 actual | Reserved plan |
+|---|---|---|---|---|
+| Draw calls / frame | < 80 | 7 | **8** (11 in editor mode: +grid, +axes, +corner gizmo) | terrain 1 · roads 1 · water 1 · river 1 · markers 2 · chunk grid 1 · buildings **1** · props 3 · bots 10 · weapon arms 2 · safe-zone wall 1 · decals/particles 4 · HUD ~8 ⇒ **≈37**, headroom ≈43 |
+| Visible triangles | < 80 000 | ≈3 200 | **≈6 300** | terrain 4 000 (18 000 after the M19/M2e heightfield) · buildings **3 094 measured** (12 000 reserved for M16/M17) · props 15 000 · bots 9 000 · weapons 3 000 · safe zone 2 000 · misc 4 000 ⇒ **≈63 000 worst case** |
+| Baked vertices | short indices ⇒ ≤ 32 767 per mesh | n/a | **6 188** (1 mesh, flush limit 24 000 in `Constants.BUILDING_VERTEX_LIMIT`) | each new zone batch flushes automatically before the limit |
+| Frame allocations | 0 | 0 | 0 | all meshes baked at load via `MeshKit`; render path reuses `Color`/`Vector3` fields; bullets, particles and damage numbers pooled (R32) |
+| FPS | desktop 60, Android ≥ 30 (SD 660-class) | n/a (viewer only) | n/a (viewer only) | pixel ratio ≤ 1.5; frustum culling per chunk (R33); LOD from M19/M2e |
+| Texture memory | 512×512 max, POT, PNG | 0 (vertex colors) | 0 (vertex colors) | shared atlas per material family; no per-building textures before the M20 asset swap |
+| APK size | keep < 40 MB | 8.6 MB (debug) | 8.6 MB (no assets added) | `.g3db` + compressed audio in release (M44–M47 / repo M13) |
+
+Budget rule: if a milestone would push draw calls over 60 or triangles over 70 000,
+batch more aggressively or cut detail **before** committing, and record the number in
+HANDOFF.md.
+
+M3 cost: **0 extra draw calls, 0 extra triangles, 0 extra textures on disk.** Building
+collision is 173 boxes in two flat `float[]` arrays built once at load (≈5.5 KB), and
+the touch widgets are 3 quads from a generated 64×64 circle texture drawn in the
+existing HUD batch. The first-person HUD is text-only for now.
+
+M4 cost: **+1 draw call and ≤ 128 triangles** from the moment the first bullet hole
+exists (8 → 9 draw calls in a match). All 64 decals live in one dynamic mesh (4 KB of
+floats, 384 indices built once) and only the 16 floats of the newest quad are
+re-uploaded per shot. Crosshair and the four touch buttons reuse the generated circle
+and white textures — still no image files, APK unchanged. A shot costs one pass over
+171 wall boxes plus 2 plinth boxes, i.e. at most 12.5 shots/s × 173 slab tests for an
+SMG; no allocation anywhere in the path (R6).
+
+## Milestone Numbering (read this first)
+
+Two numbering schemes exist in this project's history. Both are valid; this is how
+they are used so that no model ever has to guess:
+
+1. **Historical commits keep their repo ids.** `M0`, `M1` and `M2a` are already
+   merged with lettered ids (`M2a: island terrain, zone markers, roads, JSON map
+   layout`). Old commits, tags and PR titles are never renamed or rewritten.
+2. **Every new milestone uses the master-prompt id M1–M47.** Commits, PRs, SPEC rows
+   and HANDOFF entries from 2026-09-13 onward are numbered in the master sequence
+   (example: `M9: town and village buildings`).
+3. **Docs always show both ids together** — `M9 (master) = M2b (repo)` — so a note
+   written under either scheme can be matched in one lookup. `HANDOFF.md` entries
+   are titled that way and add a `Sequence:` line, e.g.
+   **`M3 (master) = after M2a (repo)`**.
+4. The **Milestone Mapping Table** below is the single translation source.
+5. **Two tracks run in parallel**, because the repo started with the world while the
+   master prompt starts with game feel. The user chose this order on 2026-09-13, so
+   R1 ("never skip milestones") applies **inside a track**, not across tracks:
+   - **Track A — world & content:** M9 ✅ → M16 → M17 → M18 → M19 → M20 → M21
+   - **Track B — feel, combat & systems:** M2 ✅ → M3 ✅ → M4 ✅ → **M5** → M6 → M7 → M8 → M10 → M11 → …
+
 ## Milestone Status
 
-| Milestone | Scope | Status |
-|---|---|---|
-| M1 | Project skeleton + CI green | ✅ done — CI green, `brfps-debug-apk` (8.6 MB) produced |
-| M2a | Island terrain + zone markers + roads + JSON map layout | ✅ done |
-| M2b | Town + village buildings | not started |
-| M2c | Industrial + military base | not started |
-| M2d | Props + vehicles + trees (incl. bridge over river) | not started |
-| M2e | Chunk loading + LOD + frustum culling | not started |
-| M3a | Virtual joystick + touch-look area | not started |
-| M3b | Player movement physics | not started |
-| M3c | Camera control + gravity + collisions | not started |
-| M4 | Landing system (plane, parachute, drop, land) | not started |
-| M5a | Crosshair + fire button + ammo counter | not started |
-| M5b | Hitscan raycast + impact decals + damage | not started |
-| M5c | Muzzle flash + recoil + screen shake | not started |
-| M6a | Loot spawns + pickup system | not started |
-| M6b | Inventory UI + weapon switch | not started |
-| M6c | Save system (Preferences) + PlayerProfile | not started |
-| M7a | Bot spawn + patrol behavior | not started |
-| M7b | Bot combat AI (cover, strafe, reload, retreat+heal) | not started |
-| M7c | Rank-based bot profiles + difficulty scaling | not started |
-| M7d | Advanced tactics (flank, grenade, squads) | not started |
-| M8 | Safe zone + BR mechanics (shrink, damage, counter, result) | not started |
-| M9a | Main menu + lobby + settings screen | not started |
-| M9b | Rank badge + XP bar + RP progress | not started |
-| M9c | Kill feed + damage numbers + post-match screen | not started |
-| M9d | Rank-up animation + level-up rewards | not started |
-| M10 | Graphics quality tiers (auto-detect + settings override) | not started |
-| M11 | Optimization pass (30 FPS floor on SD 660-class) | not started |
-| M12 | Multi-map support (desert map via JSON only) | not started |
-| M13 | Release signing + Play Store prep (on request only) | not started |
-| M14+ | Real PvP — separate project, explicitly out of scope | not started |
+### Done
+
+| Git id | Master id | Scope | Result |
+|---|---|---|---|
+| M0 | — (docs task) | SPEC + RULES + HANDOFF documentation | ✅ 2026-09-13 |
+| M1 | M1 | Project skeleton + CI green | ✅ CI green, `brfps-debug-apk` 8.6 MB |
+| M2a | part of M8 + M14 | Island terrain, zone markers, roads, JSON map layout | ✅ 3.2k tris, 7 draw calls |
+| **M9** | **M9** (= repo M2b) | **Town + village buildings** | ✅ 2026-09-13 — 32 buildings, 3 094 tris, **1** draw call |
+| **M2** | **M2** (no repo letter) | **Editor view** — world grid + XYZ axis gizmo + free-fly camera + corner orientation gizmo | ✅ 2026-09-13 — +3 draw calls in editor mode only |
+| **M3** | **M3** (= repo M3a, M3b, M3c) | **First-person camera + movement + touch controls + building collision** | ✅ 2026-09-13 — +0 draw calls, 173 collision boxes, game is now walkable |
+| **M4** | **M4** (= repo M5a, M5b) | **Shooting** — hitscan raycast, pistol, magazine/reload, bullet-hole decals, crosshair, FIRE button, ammo HUD | ✅ 2026-09-13 — +1 draw call / +128 tris max, HUD split into `ui.MatchHud` |
+
+### Next candidates — waiting for the user's "go" (R4)
+
+| Pick | Master id | Repo id | Scope | Blocked by |
+|---|---|---|---|---|
+| **A (recommended)** | M5 | M5c | Hit feedback: screen shake, muzzle flash, recoil, hit marker | nothing (M4 done) |
+| B | M10 | M7a | 3 bots that patrol and shoot back — finally something to damage | nothing (M3+M4 done) |
+| C | M16 + M17 | M2c | Industrial zone + military base (Track A; warehouse/factory/barracks already in the kit) | nothing |
+| D | M8 | M2e | Hills: noise heightmap + carved river channel + heightfield collision | nothing |
+
+M14/M15 ("full town" / "full village") are **substantially covered by M9**: the town
+already has 20 buildings on a road grid and the village 12 (8 huts + temple + 3
+houses). What is still missing from those two rows is props, the village well and
+crop fields — all of which belong to M18.
+
+### Milestone Mapping Table
+
+Repo ids are the lettered ones used by the first three commits; master ids are the
+flat M1–M47 list from the project's master prompt. "—" means the master milestone
+has no separate repo row (its work is folded into the listed one).
+
+| Master | Repo | Scope (master wording) | Status |
+|---|---|---|---|
+| M1 | M1 | Skeleton + CI | ✅ |
+| M2 | — (debug package) | Editor view (grid + XYZ axes + free camera) | ✅ done |
+| M3 | M3a, M3b, M3c | First-person camera + movement (+ touch controls, + building collision) | ✅ done |
+| M4 | M5a, M5b | Shooting + hitscan raycast + bullet holes + crosshair/ammo HUD | ✅ done |
+| M5 | M5c | Screen shake + muzzle flash + hit marker + recoil | next (option A) |
+| M6 | — (folded into M3c) | Head bob + footsteps + sprint FOV | not started |
+| M7 | M3a | Touch controls **polish** (dead zone, sensitivity setting, haptics) — basic touch controls already shipped inside M3 | not started |
+| M8 | M2e | Hills terrain + noise heightmap + lighting | not started |
+| M9 | **M2b** | 5+ buildings with interiors → town + village kit | ✅ done |
+| M10 | M7a | 3 bots (patrol + shoot) | not started — needs M3, M4 |
+| M11 | M8 | Match loop (win/lose/restart) | not started |
+| M12 | M6a, M6b | Loot + inventory | not started |
+| M13 | — (new: sound pass) | Sound pass (all SFX via `SoundManager`) | not started |
+| M14 | M2b (+ M2d props) | Full town: 20 buildings + roads + props | buildings ✅, props pending |
+| M15 | M2b (+ M2d props) | Full village: 12 huts + well + temple | buildings ✅, well/fields pending |
+| M16 | M2c | Industrial zone | not started |
+| M17 | M2c | Military base | not started |
+| M18 | M2d | Props (trees, cars, barrels, crates, bridge) | not started |
+| M19 | M2e | Chunk loading + LOD + frustum culling | not started |
+| M20 | — (new: asset swap) | Real asset swap (Kenney/Quaternius CC0) | not started |
+| M21 | — (new: lightmaps) | Baked lighting + lightmaps | not started |
+| M22 | M5a, M5b | 5 weapons | not started |
+| M23 | M6a | Items (medkit, armor, grenade, ammo box) | not started |
+| M24 | M8 | Safe zone (shrink, damage, visual) | not started |
+| M25 | M7c | Bot rank profiles (16 params × 7 ranks) | not started |
+| M26 | M7b | Bot behavior tree | not started |
+| M27 | M7d | Bot advanced tactics | not started |
+| M28 | M9b | Rank + RP system | not started |
+| M29 | M9b | Level + XP system | not started |
+| M30 | M6c | Save system (Preferences) | not started |
+| M31 | M4 | Landing system (plane, parachute, drop) | not started |
+| M32 | M9a | Main menu | not started |
+| M33 | M9a | Lobby (loadout, character, map select) | not started |
+| M34 | M5a | In-game HUD | not started |
+| M35 | M5a | Minimap + safe zone circle | not started |
+| M36 | M9c | Kill feed + damage numbers | not started |
+| M37 | M9c | Post-match screen | not started |
+| M38 | M10 | Graphics tiers | not started |
+| M39 | M11 | Optimization pass | not started |
+| M40 | M12 | Second map (desert, JSON only) | not started |
+| M41 | M12 | Multi-map system | not started |
+| M42 | — (new: audio polish) | Audio polish (music, ambient, 3D spatial) | not started |
+| M43 | — (new: balance pass) | Balance pass (weapons, bots, difficulty) | not started |
+| M44 | M13a | Release signing (keystore, Actions, AAB) | not started |
+| M45 | M13b | Play Store prep | not started |
+| M46 | M13c | Beta testing + fix pass | not started |
+| M47 | M13d | Launch | not started |
+| — | M14+ | Real PvP | explicitly out of scope (R8) |
 
 ---
+
+## First-Person Controls (master M3, repo M3a–M3c)
+
+`GameScreen` is the playable screen; `debug/EditorScreen` keeps the old orbit/free-fly
+viewer behind the main menu's **EDITOR** button (debug builds only).
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Move | `W A S D` or arrows | virtual stick on the **left half** (appears where the thumb lands) |
+| Look / aim | hold **right mouse button** + drag | drag anywhere on the **right half** |
+| Sprint | hold `Shift` (7 m/s) | push the stick to ≥ 92% deflection |
+| Crouch | `Ctrl` or `C` (2 m/s, eye 1.0 m) | **CRCH** button (bottom-right) |
+| Jump | `Space` (1.2 m ⇒ 4.85 m/s) | **JUMP** button (bottom-right) |
+| Leave the match | `Esc` / `Back` | `Back` |
+
+| Class | Package | Job |
+|---|---|---|
+| `Player` | `player` | feet position, vertical velocity, stance (`STAND`/`CROUCH`), `PlayerStats` |
+| `MovementController` | `player` | wish direction from yaw + input, speeds, jump, gravity, step-up, wall push-out, map bounds |
+| `FirstPersonCamera` | `player` | yaw/pitch look + stance eye height → shared `PerspectiveCamera` |
+| `BuildingCollider` | `world` | 173 oriented boxes baked once from the layout; circle-vs-OBB resolve + `groundHeightAt` |
+| `InputState` | `input` | one mutable frame snapshot (never allocated per frame) |
+| `InputManager` | `input` | picks the scheme (`MultitouchScreen` ⇒ touch) and forwards |
+| `DesktopInputHandler` | `input` | keyboard + right-button mouse drag |
+| `TouchInputHandler` | `input` | routes 4 pointer slots to stick / look / JUMP / CRCH, draws the widgets |
+| `VirtualJoystick`, `TouchLookArea` | `ui` | thumb stick and drag-to-aim accumulator |
+
+Rules worth keeping:
+
+- **Pointer routing is claim-on-press**: a pointer keeps the widget it first touched
+  until it lifts, so a thumb on the stick never also aims, and the two buttons win over
+  the half-screen areas.
+- **Collision boxes mirror `BuildingFactory` exactly** (same local space, same wall
+  thickness, front wall split into two jambs around `doorWidth()`), so a doorway that
+  is visually open is also walkable and interiors stay enterable. Lintels and roofs are
+  deliberately not colliders — the player cannot climb onto a roof.
+- **Plinths are walkable ground**, not walls: `groundHeightAt` returns the temple
+  plinth (0.5 m) and its front steps (0.25 m), and `STEP_UP_HEIGHT` (0.6 m) lets the
+  player walk up without jumping.
+- **`MAX_STEP_DELTA` (0.05 s) clamps the frame step** so a stall after a load cannot
+  tunnel the player through a wall.
+- Yaw 0 looks along +X and yaw 90 along +Z — the same convention as `EditorCamera`, so
+  the corner orientation gizmo and any future minimap keep working unchanged.
+- All sizes are fractions of `min(screenWidth, screenHeight)` (R46): stick radius 0.11,
+  buttons 0.13, margin 0.03, idle stick at (0.17, 0.74).
+- The HUD draws `HP | AR | STAND/CROUCH/AIR` top-left, `FPS | DC | Tri` top-right, and
+  (debug builds) `X Z Y | BOX n` plus a one-line control hint. Strings are rebuilt only
+  when a displayed value changes, so the render loop allocates nothing (R6).
+
+## Shooting (master M4, repo M5a–M5b)
+
+One hitscan ray per shot, cast from the camera through the crosshair, tested against
+the same boxes the player collides with.
+
+| Class | Package | Job |
+|---|---|---|
+| `WeaponType` | `weapons` | the five SPEC weapons: damage, fire interval, magazine, range, reload time, recoil, projectile flag (unchanged since M1) |
+| `Weapon` | `weapons` | one gun instance: magazine, reserve ammo, fire cooldown, reload timer (+ `getReloadProgress()` for the HUD) |
+| `WeaponController` | `weapons` | ticks the gun, casts the shot ray, spawns the decal, counts shots |
+| `RayHit` | `world` | reused ray result: distance, point, unit normal, surface kind |
+| `BuildingCollider.raycast` | `world` | slab test per wall box over its real height range + plinth tops + flat ground |
+| `ColliderBoxes` | `world` | bakes the boxes (8 floats each) from the layout — split out of `BuildingCollider` to respect the 300-line limit |
+| `ImpactDecals` | `world` | 64 bullet holes in one dynamic mesh: ring buffer, 1 draw call, 16 floats re-uploaded per shot |
+| `Crosshair`, `MatchHud`, `HudData` | `ui` | crosshair, all HUD text, and the per-frame value snapshot the HUD reads |
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Fire | hold **left mouse button** | hold **FIRE** (large, bottom-right) |
+| Reload | `R` | automatic when the magazine empties |
+
+Rules worth keeping:
+
+- **The ray stops at the weapon's range** and only reports the *nearest* hit
+  (`RayHit.accept` keeps the minimum), so walls, plinth tops and ground can be tested
+  in any order.
+- **Walls are tested over their real height range** (`baseY..topY`), so a shot can pass
+  over a hut and a decal never floats above a wall it did not hit. Player collision, in
+  contrast, is deliberately height-blind.
+- **Ground hits are limited to the map bounds** (`±size/2`); beyond the island a shot
+  simply flies. When master M8 adds hills, `castGround` is the one place to replace the
+  flat `y = 0` plane with heightfield sampling.
+- **Decals are a ring buffer of 64** (`Constants.DECAL_POOL_SIZE`): the oldest hole is
+  overwritten, all of them draw in one call with the world's already-bound shader
+  (`Arena.worldShader()` — never create a second program, `Mesh.render` does not bind).
+- **Decal orientation** uses `u = normalize(cross(normal, helper))`, `v = cross(normal, u)`
+  with `helper = +Y` unless the normal is near-vertical, then `+X`; corners are written
+  CCW seen from the shooter, so `cross(u, v) == normal`.
+- **`Math3D.direction(yaw, pitch, out)` is now the only look-direction formula** in the
+  project (it used to disagree with the cameras). Bots, turrets and grenade throws must
+  call it too, or aim will not match what the player sees.
+- Damage is *not* applied yet: there is nothing to shoot. Master M10 (bots) inserts a
+  bot test before the world test in `WeaponController.castShot`, and master M5 adds the
+  hit marker, muzzle flash, recoil and screen shake.
+
+## Editor View (master M2)
+
+A debug camera for inspecting the map, in `com.brfps.debug` (R44) and gated by
+`Constants.DEBUG_TOOLS_ENABLED` (R43). Toggle it with **F1** on desktop or by tapping
+the **CAM** button top-left on a phone.
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Switch camera | `F1` | tap **CAM** (top-left) |
+| Move | `W A S D` or arrows | drag anywhere on the **left half** (drag = direction + speed) |
+| Altitude | `E` up, `Q` down | **UP** / **DN** buttons (bottom-right) |
+| Look | hold **right mouse button** + drag | drag anywhere on the **right half** |
+| Fast | hold `Shift` (45 m/s vs 12 m/s) | full drag deflection |
+| Leave the world | `Esc` / `Back` | `Back` |
+
+What is drawn in editor mode: a 10 m minor / 50 m major grid over the whole map with a
+bright center cross, an XYZ axis gizmo at the world origin (X red, Y green, Z blue,
+12 m long), a corner orientation gizmo bottom-left showing the camera's current axes,
+and a HUD line with `X Y Z yaw pitch` plus the control help.
+
+Notes for whoever builds the real HUD: yaw 0 looks along +X and yaw 90 along +Z
+(`EditorCamera.direction`), pitch is clamped by `Constants.PITCH_MIN/PITCH_MAX`, the
+far plane widens to 900 m in editor mode and returns to 300 m in orbit mode, and every
+on-screen rectangle is a fraction of `min(screenWidth, screenHeight)` (R46).
 
 ## Multi-Map System (since M2a)
 
 - Building kit is fixed (8 buildings + 7 props) and reused across all maps.
+  Since M9 the 8 building ids are: `house_small`, `house_two_storey`, `shop`,
+  `hut`, `temple`, `warehouse`, `factory`, `barracks` — sizes, heights, roof style,
+  plinth and palette per type live in `world/BuildingType.java`; shared dimensions
+  (wall thickness, door, window, roof pitch/overhang/slab, floor offset) live in
+  `util/Constants.java` (R7). Geometry is generated by `world/BuildingFactory.java`
+  and batched into one mesh per map by `world/BuildingBatcher.java`.
 - Every map is pure data: `assets/maps/index.json` lists the maps,
   `assets/maps/<id>.layout` describes each one. Adding a new map must not
   require code changes.
 - `MapRegistry` (`world/`) parses the index; `MapLayout` (`world/`) parses a
-  layout file. Unknown JSON fields are ignored (forward-compatible).
+  layout file. Unknown JSON fields are ignored (forward-compatible). An unknown
+  `buildings[].type` is logged and skipped, never fatal (R25).
 
 ### Layout JSON schema (center origin: (0,0) is the map center, range ±size/2)
 
@@ -217,8 +548,8 @@ the channel; the bridge arrives in M2d.
 | `zones[]` | array | `id`, `name`, `x`, `z`, `width`, `depth`, `ground` |
 | `roads[]` | array | `from: [x,z]`, `to: [x,z]`, `width` |
 | `rivers[]` | array | `points: [[x,z]...]` polyline, `width`, `depth` (channel carved in M2e; bridge in M2d) |
-| `buildings[]` | array | `type`, `x`, `z`, `rotation` (filled from M2b) |
-| `props[]` | array | `type`, `x`, `z`, `rotation`, `scale` (filled from M2d) |
+| `buildings[]` | array | `type`, `x`, `z`, `rotation` (yaw in degrees, local +Z = front). Filled since M9: 32 on the island (20 town + 12 village) |
+| `props[]` | array | `type`, `x`, `z`, `rotation`, `scale` (filled from master M18 / repo M2d) |
 | `spawnPoints[]` | array | `x`, `z`, `zone` (zone tag is advisory) |
 | `lootSpawns[]` | array | `x`, `z` (used from M6a) |
 
@@ -230,11 +561,18 @@ error log — a new map can never crash the game.
 ### Map performance rules
 
 - Draw calls budget < 80; visible triangles budget < 80,000.
-- M2a baseline: 40×40 terrain segments (~3.2k tris total, 7 draw calls).
-  Raise segmentation in M2e together with the heightfield, never on flat maps.
+- M2a baseline: 40×40 terrain segments (~3.2k tris, 7 draw calls).
+- M9 baseline: **~6.3k tris, 8 draw calls** — the 32 buildings cost exactly one
+  extra draw call because `BuildingBatcher` bakes them into a single mesh.
+  Raise segmentation in master M19 (repo M2e) together with the heightfield,
+  never on flat maps.
+- Building placement rule (validated for M9): a building's footprint **including**
+  its front overhang (shop awning 1.5 m, temple steps 1.8 m, temple plinth 0.8 m all
+  round) must not overlap another building, a road strip, the river band or a spawn
+  point, and should stay inside its zone rectangle.
 - Debug visuals toggle in `Constants.java`: `DEBUG_SHOW_ZONE_MARKERS`
-  (set false after M5), `DEBUG_SHOW_SPAWN_MARKERS` (remove after M4),
-  `DEBUG_SHOW_CHUNK_GRID` (preview of the M2e 10×10 × 30 m chunking).
-- M2a verification on-device: `GameScreen` shows `FPS | DC | Tri` top-right and
+  (set false after master M5), `DEBUG_SHOW_SPAWN_MARKERS` (remove after master M31),
+  `DEBUG_SHOW_CHUNK_GRID` (preview of the M19/M2e 10×10 × 30 m chunking).
+- Verification on-device: `GameScreen` shows `FPS | DC | Tri` top-right and
   saves `debug/screenshot.png` (app-internal storage, no permissions) 5 s after
   entering. Pull it with: `adb shell run-as com.brfps cat debug/screenshot.png > shot.png`

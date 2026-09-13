@@ -1,7 +1,7 @@
 {
   "id": "island",
   "name": "Island",
-  "version": 1,
+  "version": 2,
   "size": 300,
   "terrain": "tropical",
   "water": true,
@@ -24,7 +24,48 @@
   "rivers": [
     { "points": [[-50, -30], [0, -20], [60, -10], [120, 0]], "width": 12, "depth": -1.5 }
   ],
-  "buildings": [],
+  "buildings": [
+    { "type": "house_two_storey", "x": 78,   "z": 15,   "rotation": 180 },
+    { "type": "shop",             "x": 90,   "z": 15,   "rotation": 180 },
+    { "type": "house_small",      "x": 102,  "z": 15,   "rotation": 180 },
+
+    { "type": "house_small",      "x": 78,   "z": 27,   "rotation": 0 },
+    { "type": "house_two_storey", "x": 90,   "z": 27,   "rotation": 0 },
+    { "type": "shop",             "x": 102,  "z": 27,   "rotation": 0 },
+    { "type": "house_small",      "x": 110,  "z": 27,   "rotation": 90 },
+
+    { "type": "house_small",      "x": 84,   "z": 36,   "rotation": 0 },
+    { "type": "house_two_storey", "x": 96,   "z": 36,   "rotation": 0 },
+
+    { "type": "shop",             "x": 71,   "z": -22,  "rotation": 180 },
+    { "type": "house_small",      "x": 80,   "z": -22,  "rotation": 180 },
+    { "type": "house_two_storey", "x": 92,   "z": -22,  "rotation": 180 },
+    { "type": "house_small",      "x": 104,  "z": -22,  "rotation": 180 },
+
+    { "type": "house_small",      "x": 68,   "z": -33,  "rotation": 0 },
+    { "type": "shop",             "x": 80,   "z": -33,  "rotation": 0 },
+    { "type": "house_small",      "x": 92,   "z": -33,  "rotation": 0 },
+    { "type": "house_two_storey", "x": 104,  "z": -33,  "rotation": 0 },
+
+    { "type": "house_two_storey", "x": 86,   "z": 6,    "rotation": 180 },
+    { "type": "house_small",      "x": 100,  "z": 6,    "rotation": 180 },
+    { "type": "house_small",      "x": 60,   "z": -36,  "rotation": 0 },
+
+    { "type": "hut",              "x": -20,  "z": 104,  "rotation": 180 },
+    { "type": "hut",              "x": -10,  "z": 104,  "rotation": 180 },
+    { "type": "temple",           "x": 0,    "z": 106,  "rotation": 180 },
+    { "type": "hut",              "x": 10,   "z": 104,  "rotation": 180 },
+    { "type": "hut",              "x": 20,   "z": 104,  "rotation": 180 },
+
+    { "type": "hut",              "x": -15,  "z": 116,  "rotation": 0 },
+    { "type": "house_small",      "x": 0,    "z": 118,  "rotation": 0 },
+    { "type": "hut",              "x": 15,   "z": 116,  "rotation": 0 },
+
+    { "type": "hut",              "x": -9,   "z": 78,   "rotation": 0 },
+    { "type": "hut",              "x": 25,   "z": 75,   "rotation": 270 },
+    { "type": "house_small",      "x": -24,  "z": 88,   "rotation": 90 },
+    { "type": "house_small",      "x": 16,   "z": 90,   "rotation": 270 }
+  ],
   "props": [],
   "spawnPoints": [
     { "x": 75,   "z": 0,    "zone": "town" },

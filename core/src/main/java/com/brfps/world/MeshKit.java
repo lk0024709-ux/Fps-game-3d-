@@ -20,6 +20,11 @@ public class MeshKit {
     public final FloatArray vertices = new FloatArray();
     public final ShortArray indices = new ShortArray();
 
+    /** Shared vertex layout: position (3 floats) + packed RGBA color. */
+    public static VertexAttributes attributes() {
+        return ATTRIBUTES;
+    }
+
     /** Adds a single vertex. */
     public void vertex(float x, float y, float z, float colorBits) {
         if (vertices.size / 4 >= Short.MAX_VALUE) {
