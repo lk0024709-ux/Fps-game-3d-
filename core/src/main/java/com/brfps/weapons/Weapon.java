@@ -30,6 +30,11 @@ public class Weapon {
         return reserveAmmo;
     }
 
+    /** Overrides the reserve (starting loadout, ammo box); never negative. */
+    public void setReserveAmmo(int reserveAmmo) {
+        this.reserveAmmo = Math.max(0, reserveAmmo);
+    }
+
     public boolean isReloading() {
         return reloadRemaining > 0f;
     }

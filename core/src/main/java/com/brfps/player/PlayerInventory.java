@@ -116,6 +116,38 @@ public class PlayerInventory {
         return slot >= 0 && slot < Constants.PRIMARY_SLOTS;
     }
 
+    /**
+     * Starting loadout (SPEC: Shooting): a full pistol with bonus reserve, selected,
+     * plus medkits. Slot 3 stays empty, which is bare fists (HUD phase A2 display).
+     */
+    public void defaultLoadout() {
+        clear();
+        addWeapon(WeaponType.PISTOL);
+        Weapon pistol = slots[pistolSlot()];
+        if (pistol != null) {
+            pistol.setReserveAmmo(Constants.STARTING_RESERVE_PISTOL);
+        }
+        for (int i = 0; i < Constants.STARTING_MEDKITS; i++) {
+            addItem(ItemType.MEDKIT);
+        }
+    }
+
+    /** Carried medkit units (MEDI button count, HUD phase A2). */
+    public int medCount() {
+        return itemCount(ItemType.MEDKIT);
+    }
+
+    /** Carried units of one item type. */
+    public int itemCount(ItemType type) {
+        int total = 0;
+        for (int i = 0; i < items.size; i++) {
+            if (items.get(i).getType() == type) {
+                total += items.get(i).getCount();
+            }
+        }
+        return total;
+    }
+
     public Array<Item> getItems() {
         return items;
     }

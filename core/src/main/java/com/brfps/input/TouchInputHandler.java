@@ -3,8 +3,8 @@ package com.brfps.input;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.brfps.ui.TouchButton;
 import com.brfps.ui.TouchLookArea;
 import com.brfps.ui.VirtualJoystick;
 import com.brfps.util.Constants;
@@ -12,7 +12,9 @@ import com.brfps.util.Constants;
 /**
  * Touch controls (R45): left-half virtual joystick to move (mid deflection jogs, full
  * sprints), right-half drag to aim, FIRE + JUMP held buttons, CRCH / SIT / SLP stance
- * toggles and a SPR button that toggles on tap and sprints while held. Every
+ * toggles and a SPR button that toggles on tap and sprints while held. Since HUD
+ * phase A2 the reload/pack/medi buttons and the weapon-box taps are handled by
+ * {@link HudButtons} (same package), tested before these widgets so they win. Every
  * rectangle is a fraction of the screen (R46), and each pointer is routed once on
  * press, so a thumb on the stick never also aims. Pointer slots are polled, so
  * nothing is allocated per frame (R6).
@@ -29,6 +31,7 @@ public class TouchInputHandler {
     private static final int OWNER_SPRINT = 6;
     private static final int OWNER_SEAT = 7;
     private static final int OWNER_SLEEP = 8;
+    private static final int OWNER_HUD = 9;
 
     private static final int STANCE_STAND = 0;
     private static final int STANCE_CROUCH = 1;
@@ -37,9 +40,12 @@ public class TouchInputHandler {
 
     private final VirtualJoystick joystick = new VirtualJoystick();
     private final TouchLookArea lookArea = new TouchLookArea();
-    private final GlyphLayout label = new GlyphLayout();
+    private final TouchButton drawer = new TouchButton();
+    private final HudButtons hudButtons = new HudButtons();
     private final int[] owner = new int[MAX_POINTERS];
+    private final int[] hudId = new int[MAX_POINTERS];
     private final boolean[] wasTouched = new boolean[MAX_POINTERS];
+    private int activeSlot;
     private boolean fireDown;
     private boolean jumpDown;
     private boolean sprintHeld;
@@ -83,6 +89,7 @@ public class TouchInputHandler {
         out.prone = touchStance == STANCE_PRONE;
         out.lookDX = lookArea.consumeDX();
         out.lookDY = lookArea.consumeDY();
+        hudButtons.writeState(out);
     }
 
     /** Real sprint state (stamina-gated) for the SPR glow; set before render. */
@@ -90,10 +97,22 @@ public class TouchInputHandler {
         sprintActive = sprinting;
     }
 
+    /**
+     * Active weapon slot from the last bound frame; weapon-box taps are mapped with
+     * it, so it must be set before update() (one frame stale at most, HUD phase A2).
+     */
+    public void setActiveSlot(int activeSlot) {
+        this.activeSlot = activeSlot;
+    }
+
     /** A fresh touch claims whichever widget it landed on. */
     private void beginPointer(int pointer, float x, float y, int width, int height) {
-        owner[pointer] = claim(x, y, width, height);
-        tap(owner[pointer], x, y);
+        owner[pointer] = claim(pointer, x, y, width, height);
+        if (owner[pointer] == OWNER_HUD) {
+            hudButtons.tap(hudId[pointer]);
+        } else {
+            tap(owner[pointer], x, y);
+        }
     }
 
     /** A held touch feeds its owner; FIRE/JUMP/SPR keep reporting while pressed. */
@@ -108,6 +127,8 @@ public class TouchInputHandler {
             jumpDown = true;
         } else if (owner[pointer] == OWNER_SPRINT) {
             sprintHeld = true;
+        } else if (owner[pointer] == OWNER_HUD) {
+            hudButtons.setHeld(hudId[pointer], true);
         }
         // Stance buttons (CRCH/SEAT/SLEEP) are toggles: nothing to do while held.
     }
@@ -139,38 +160,44 @@ public class TouchInputHandler {
             joystick.end();
         } else if (owner[pointer] == OWNER_LOOK) {
             lookArea.end();
+        } else if (owner[pointer] == OWNER_HUD) {
+            hudButtons.setHeld(hudId[pointer], false);
+            hudId[pointer] = HudButtons.NONE;
         }
         owner[pointer] = OWNER_NONE;
     }
 
-    /** Buttons win over the two half-screen areas, so they stay usable. */
-    private static int claim(float x, float y, int width, int height) {
+    /**
+     * Buttons win over the two half-screen areas, so they stay usable; the A2 HUD
+     * widgets are tested first, so a box tap never also aims.
+     */
+    private int claim(int pointer, float x, float y, int width, int height) {
+        hudId[pointer] = HudButtons.hit(x, y, width, height, activeSlot);
+        if (hudId[pointer] != HudButtons.NONE) {
+            return OWNER_HUD;
+        }
         float margin = buttonMargin(width, height);
         float fire = fireButtonSize(width, height);
-        if (inside(x, y, fireLeft(width, height), height - margin - fire, fire)) {
+        if (TouchButton.inside(x, y, fireLeft(width, height), height - margin - fire, fire)) {
             return OWNER_FIRE;
         }
         float size = buttonSize(width, height);
-        if (inside(x, y, jumpLeft(width, height), height - margin - size, size)) {
+        if (TouchButton.inside(x, y, jumpLeft(width, height), height - margin - size, size)) {
             return OWNER_JUMP;
         }
-        if (inside(x, y, crouchLeft(width, height), height - margin - size, size)) {
+        if (TouchButton.inside(x, y, crouchLeft(width, height), height - margin - size, size)) {
             return OWNER_CROUCH;
         }
-        if (inside(x, y, sprintLeft(width, height), sprintTop(width, height), size)) {
+        if (TouchButton.inside(x, y, sprintLeft(width, height), sprintTop(width, height), size)) {
             return OWNER_SPRINT;
         }
-        if (inside(x, y, seatLeft(width, height), seatTop(width, height), size)) {
+        if (TouchButton.inside(x, y, seatLeft(width, height), seatTop(width, height), size)) {
             return OWNER_SEAT;
         }
-        if (inside(x, y, sleepLeft(width, height), sleepTop(width, height), size)) {
+        if (TouchButton.inside(x, y, sleepLeft(width, height), sleepTop(width, height), size)) {
             return OWNER_SLEEP;
         }
         return x < width * 0.5f ? OWNER_STICK : OWNER_LOOK;
-    }
-
-    private static boolean inside(float x, float y, float left, float top, float size) {
-        return x >= left && x <= left + size && y >= top && y <= top + size;
     }
 
     /** Small button edge length in pixels (JUMP, CRCH, SPR, SIT, SLP). */
@@ -193,7 +220,8 @@ public class TouchInputHandler {
         return width - buttonMargin(width, height) - fireButtonSize(width, height);
     }
 
-    private static float jumpLeft(int width, int height) {
+    /** Package-visible: HudButtons centres RELOAD in this column (HUD phase A2). */
+    static float jumpLeft(int width, int height) {
         return fireLeft(width, height) - buttonMargin(width, height) - buttonSize(width, height);
     }
 
@@ -238,44 +266,34 @@ public class TouchInputHandler {
         return stackedTop(2, width, height);
     }
 
-    /** Draws the stick and the six action buttons. */
+    /** Draws the stick, the six action buttons and the A2 HUD widgets. */
     public void render(SpriteBatch batch, Texture circle, BitmapFont font,
-                       float width, float height) {
+                       float width, float height, int medCount) {
         int screenWidth = (int) width;
         int screenHeight = (int) height;
         joystick.render(batch, circle, width, height);
         float margin = buttonMargin(screenWidth, screenHeight);
         float fire = fireButtonSize(screenWidth, screenHeight);
         float size = buttonSize(screenWidth, screenHeight);
-        drawButton(batch, circle, font, "FIRE", fireLeft(screenWidth, screenHeight),
-                margin, fire, fireDown);
-        drawButton(batch, circle, font, "JUMP", jumpLeft(screenWidth, screenHeight),
-                margin, size, jumpDown);
-        drawButton(batch, circle, font, "CRCH", crouchLeft(screenWidth, screenHeight),
-                margin, size, touchStance == STANCE_CROUCH);
-        drawButton(batch, circle, font, "SPR", sprintLeft(screenWidth, screenHeight),
-                stackedBottom(1, screenWidth, screenHeight), size, sprintActive);
-        drawButton(batch, circle, font, "SIT", seatLeft(screenWidth, screenHeight),
+        drawer.draw(batch, circle, font, "FIRE", fireLeft(screenWidth, screenHeight),
+                margin, fire, state(fireDown));
+        drawer.draw(batch, circle, font, "JUMP", jumpLeft(screenWidth, screenHeight),
+                margin, size, state(jumpDown));
+        drawer.draw(batch, circle, font, "CRCH", crouchLeft(screenWidth, screenHeight),
+                margin, size, state(touchStance == STANCE_CROUCH));
+        drawer.draw(batch, circle, font, "SPR", sprintLeft(screenWidth, screenHeight),
+                stackedBottom(1, screenWidth, screenHeight), size, state(sprintActive));
+        drawer.draw(batch, circle, font, "SIT", seatLeft(screenWidth, screenHeight),
                 stackedBottom(1, screenWidth, screenHeight), size,
-                touchStance == STANCE_SIT);
-        drawButton(batch, circle, font, "SLP", sleepLeft(screenWidth, screenHeight),
+                state(touchStance == STANCE_SIT));
+        drawer.draw(batch, circle, font, "SLP", sleepLeft(screenWidth, screenHeight),
                 stackedBottom(2, screenWidth, screenHeight), size,
-                touchStance == STANCE_PRONE);
+                state(touchStance == STANCE_PRONE));
+        hudButtons.render(batch, circle, font, width, height, medCount);
     }
 
-    /** Round button with a centred label; x/y is its bottom-left in batch coords. */
-    private void drawButton(SpriteBatch batch, Texture circle, BitmapFont font, String text,
-                            float x, float y, float size, boolean active) {
-        if (active) {
-            batch.setColor(1f, 0.9f, 0.25f, 0.55f);
-        } else {
-            batch.setColor(1f, 1f, 1f, 0.22f);
-        }
-        batch.draw(circle, x, y, size, size);
-        batch.setColor(1f, 1f, 1f, 1f);
-        font.setColor(1f, 1f, 1f, 0.9f);
-        label.setText(font, text);
-        font.draw(batch, label, x + (size - label.width) * 0.5f,
-                y + (size + label.height) * 0.5f);
+    /** Maps a pressed flag onto a TouchButton state. */
+    private static int state(boolean active) {
+        return active ? TouchButton.ACTIVE : TouchButton.NORMAL;
     }
 }

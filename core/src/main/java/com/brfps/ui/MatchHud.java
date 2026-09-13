@@ -9,10 +9,10 @@ import com.brfps.util.Constants;
 /**
  * The match HUD, extracted from GameScreen so that screen stays inside the 300-line
  * limit (R13): crosshair (with the master M5 recoil bloom), muzzle flash, hit marker,
- * ammo counter, health/armor/stance, performance line and — in debug builds — the
- * position, collider, recoil and shooting readout plus a control hint. Each string is
- * rebuilt only when a value it shows actually changes, so the render loop allocates
- * nothing (R6, R30).
+ * HP/armor/stamina bars, the four weapon boxes, ammo counter, stance, performance
+ * line and — in debug builds — the position, collider, recoil and shooting readout
+ * plus a control hint. Each string is rebuilt only when a value it shows actually
+ * changes, so the render loop allocates nothing (R6, R30).
  */
 public class MatchHud {
 
@@ -24,23 +24,23 @@ public class MatchHud {
     private static final String RELOAD_LABEL = "RELOADING ";
 
     private final Crosshair crosshair = new Crosshair();
+    private final HudBars bars = new HudBars();
+    private final WeaponPanel panel = new WeaponPanel();
     private final GlyphLayout layout = new GlyphLayout();
-    private final StringBuilder statsBuilder = new StringBuilder(48);
+    private final StringBuilder stanceBuilder = new StringBuilder(16);
     private final StringBuilder ammoBuilder = new StringBuilder(48);
     private final StringBuilder perfBuilder = new StringBuilder(48);
     private final StringBuilder debugBuilder = new StringBuilder(96);
 
-    private String statsString = "";
+    private String stanceString = "";
     private String ammoString = "";
     private String perfString = "";
     private String debugString = "";
-    private int lastHealth = -1;
-    private int lastArmor = -1;
-    private int lastStamina = -1;
     private String lastStance = "";
     private int lastMagazine = -1;
     private int lastReserve = -1;
     private int lastReloadTenths = -1;
+    private boolean lastFist;
     private int lastFps = -1;
     private int lastDrawCalls = -1;
     private int lastTriangles = -1;
@@ -69,11 +69,14 @@ public class MatchHud {
                     worldWidth, worldHeight, data.reloading, data.crosshairBloom);
             flash.render(batch, assets.glowRegion(), worldWidth, worldHeight);
             marker.render(batch, assets.whiteRegion(), worldWidth, worldHeight);
+            bars.render(batch, assets.white(), font, data, worldWidth, worldHeight);
+            panel.render(batch, assets.white(), font, data, worldWidth, worldHeight);
         }
 
+        font.setColor(1f, 1f, 1f, 0.9f);
+        layout.setText(font, buildStanceString(data));
+        font.draw(batch, layout, 12f, 12f + layout.height);
         font.setColor(0.05f, 0.08f, 0.12f, 1f);
-        layout.setText(font, buildStatsString(data));
-        font.draw(batch, layout, 12f, worldHeight - 12f);
         layout.setText(font, buildPerfString(data));
         font.draw(batch, layout, worldWidth - layout.width - 12f, worldHeight - 12f);
 
@@ -102,8 +105,8 @@ public class MatchHud {
         font.getData().setScale(1f);
     }
 
-    /** "HP 100 | AR 0 | ST 85 | STAND" (bars replace this in HUD phase A2). */
-    private String buildStatsString(HudData data) {
+    /** "STAND" (bottom-left); HP/armor/stamina moved into bars in HUD phase A2. */
+    private String buildStanceString(HudData data) {
         if (data.loadFailed) {
             return "";
         }
@@ -119,41 +122,40 @@ public class MatchHud {
         } else {
             stance = STAND_LABEL;
         }
-        int stamina = Math.round(data.stamina);
-        if (data.health != lastHealth || data.armor != lastArmor
-                || stamina != lastStamina || stance != lastStance) {
-            lastHealth = data.health;
-            lastArmor = data.armor;
-            lastStamina = stamina;
+        if (stance != lastStance) {
             lastStance = stance;
-            statsBuilder.setLength(0);
-            statsBuilder.append("HP ").append(data.health)
-                    .append(" | AR ").append(data.armor)
-                    .append(" | ST ").append(stamina)
-                    .append(" | ").append(stance);
-            statsString = statsBuilder.toString();
+            stanceBuilder.setLength(0);
+            stanceBuilder.append(stance);
+            stanceString = stanceBuilder.toString();
         }
-        return statsString;
+        return stanceString;
     }
 
-    /** "PISTOL 12 / 60", or "PISTOL RELOADING 74%" while the magazine changes. */
+    /**
+     * "PISTOL 12 / 60", "PISTOL RELOADING 74%" while the magazine changes, or bare
+     * "FIST" (fists never show ammo numbers).
+     */
     private String buildAmmoString(HudData data) {
         if (data.loadFailed) {
             return "";
         }
         int reloadTenths = Math.round(data.reloadProgress * 10f);
-        if (data.ammoInMagazine != lastMagazine || data.reserveAmmo != lastReserve
-                || reloadTenths != lastReloadTenths) {
+        if (data.fistActive != lastFist || data.ammoInMagazine != lastMagazine
+                || data.reserveAmmo != lastReserve || reloadTenths != lastReloadTenths) {
+            lastFist = data.fistActive;
             lastMagazine = data.ammoInMagazine;
             lastReserve = data.reserveAmmo;
             lastReloadTenths = reloadTenths;
             ammoBuilder.setLength(0);
-            ammoBuilder.append(data.weaponName).append(' ');
-            if (data.reloading) {
-                ammoBuilder.append(RELOAD_LABEL).append(reloadTenths * 10).append('%');
-            } else {
-                ammoBuilder.append(data.ammoInMagazine)
-                        .append(" / ").append(data.reserveAmmo);
+            ammoBuilder.append(data.weaponName);
+            if (!data.fistActive) {
+                ammoBuilder.append(' ');
+                if (data.reloading) {
+                    ammoBuilder.append(RELOAD_LABEL).append(reloadTenths * 10).append('%');
+                } else {
+                    ammoBuilder.append(data.ammoInMagazine)
+                            .append(" / ").append(data.reserveAmmo);
+                }
             }
             ammoString = ammoBuilder.toString();
         }

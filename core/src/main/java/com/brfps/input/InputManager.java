@@ -43,9 +43,9 @@ public class InputManager {
 
     /** Draws the touch widgets; a no-op on desktop. */
     public void render(SpriteBatch batch, Texture circle, BitmapFont font,
-                       float width, float height) {
+                       float width, float height, int medCount) {
         if (touchDevice) {
-            touch.render(batch, circle, font, width, height);
+            touch.render(batch, circle, font, width, height, medCount);
         }
     }
 
@@ -56,10 +56,17 @@ public class InputManager {
         }
     }
 
+    /** Active weapon slot for box-tap mapping; a no-op on desktop. */
+    public void setActiveSlot(int activeSlot) {
+        if (touchDevice) {
+            touch.setActiveSlot(activeSlot);
+        }
+    }
+
     /** One-line control hint for the HUD. */
     public String helpText() {
         return touchDevice
-                ? "stick: move (mid = jog, full/SPR = sprint) | drag: aim | FIRE JUMP CRCH SPR SIT SLP"
-                : "WASD move | RMB drag: aim | LMB fire | R reload | SPACE jump | SHIFT sprint | C/X/Z crouch/sit/prone";
+                ? "stick: move (mid = jog, full/SPR = sprint) | drag: aim | FIRE JUMP CRCH SPR SIT SLP RLD PACK MEDI | tap boxes: switch"
+                : "WASD move | RMB drag: aim | LMB fire | R reload | 1-4/Q switch | H medi | SPACE jump | SHIFT sprint | C/X/Z crouch/sit/prone";
     }
 }

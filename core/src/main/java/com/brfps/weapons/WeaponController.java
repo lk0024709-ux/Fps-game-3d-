@@ -1,22 +1,24 @@
 package com.brfps.weapons;
 
 import com.badlogic.gdx.math.Vector3;
+import com.brfps.player.PlayerInventory;
 import com.brfps.world.BuildingCollider;
 import com.brfps.world.ImpactDecals;
 import com.brfps.world.RayHit;
 
 /**
- * Fires the player's weapon: ticks the gun, casts one hitscan ray per shot from the
- * camera, leaves a bullet hole on whatever it hit, and counts shots for the HUD.
- * The ray stops at the weapon's range; damage to bots lands with master M10, when
- * there is finally something to damage (bots will be tested before the world).
- * Since master M5 the class also reports the shot it just took
+ * Fires the player's active weapon: ticks every carried gun, casts one hitscan ray
+ * per shot from the camera, leaves a bullet hole on whatever it hit, and counts shots
+ * for the HUD. The ray stops at the weapon's range; damage to bots lands with master
+ * M10, when there is finally something to damage (bots will be tested before the
+ * world). Since master M5 the class also reports the shot it just took
  * ({@link #firedThisFrame()}), which is the single event the screen turns into recoil,
- * shake, muzzle flash, hit marker and the placeholder beep.
+ * shake, muzzle flash, hit marker and the placeholder beep. Bare fists (empty melee
+ * slot) cannot fire — the M23 punch combos onto the same trigger later.
  */
 public class WeaponController {
 
-    private final Weapon weapon;
+    private final PlayerInventory inventory;
     private final BuildingCollider collider;
     /** Null only where world effects are not wanted; shots still register. */
     private final ImpactDecals decals;
@@ -27,24 +29,30 @@ public class WeaponController {
     private boolean firedThisFrame;
     private float lastShotRecoil;
 
-    public WeaponController(Weapon weapon, BuildingCollider collider, ImpactDecals decals) {
-        this.weapon = weapon;
+    public WeaponController(PlayerInventory inventory, BuildingCollider collider,
+                            ImpactDecals decals) {
+        this.inventory = inventory;
         this.collider = collider;
         this.decals = decals;
     }
 
     /**
-     * Runs the weapon for this frame.
+     * Runs the weapons for this frame.
      *
      * @param triggerHeld   fire button or left mouse button down
-     * @param reloadPressed reload requested this frame (R key)
+     * @param reloadPressed reload requested this frame (R key or RLD button)
      * @param origin        ray start: the camera position, i.e. the player's eyes
      * @param direction     unit look direction from FirstPersonCamera
      */
     public void update(float delta, boolean triggerHeld, boolean reloadPressed,
                        Vector3 origin, Vector3 direction) {
         firedThisFrame = false;
-        weapon.update(delta);
+        tickCarried(delta);
+        Weapon weapon = inventory.getActiveWeapon();
+        if (weapon == null) {
+            hit.clear(); // fists: no ray, so the last impact must not linger
+            return;
+        }
         if (reloadPressed) {
             weapon.startReload();
         }
@@ -64,8 +72,22 @@ public class WeaponController {
         castShot(origin, direction);
     }
 
+    /** Cooldowns and reloads tick on every carried gun, not just the active one. */
+    private void tickCarried(float delta) {
+        for (int slot = 0; slot < inventory.getSlotCount(); slot++) {
+            Weapon carried = inventory.getSlot(slot);
+            if (carried != null) {
+                carried.update(delta);
+            }
+        }
+    }
+
     /** One hitscan ray against the world, and a decal where it lands. */
     private void castShot(Vector3 origin, Vector3 direction) {
+        Weapon weapon = inventory.getActiveWeapon();
+        if (weapon == null) {
+            return;
+        }
         float range = weapon.getType().range();
         boolean hitSomething = collider.raycast(origin.x, origin.y, origin.z,
                 direction.x, direction.y, direction.z, range, hit);
@@ -79,8 +101,9 @@ public class WeaponController {
         }
     }
 
+    /** Active weapon, or null when bare fists are selected (HUD shows "FIST"). */
     public Weapon getWeapon() {
-        return weapon;
+        return inventory.getActiveWeapon();
     }
 
     /** True only on the frame a shot left the barrel: drives every M5 effect. */

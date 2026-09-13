@@ -65,6 +65,11 @@ public enum WeaponType {
         return recoil;
     }
 
+    /** Fire selector shown in the weapon panel (HUD phase A2). */
+    public String fireMode() {
+        return this == SMG || this == RIFLE ? "AUTO" : "SEMI";
+    }
+
     /**
      * Inventory slot category: the pistol is PISTOL, everything else carried today is
      * PRIMARY. MG/DMR map to PRIMARY and blades to MELEE when those types land
