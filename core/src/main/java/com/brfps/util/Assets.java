@@ -9,13 +9,15 @@ import com.badlogic.gdx.utils.Disposable;
 
 /**
  * Central asset holder. Real art is streamed through the AssetManager once it
- * exists on disk; until then a generated 1x1 white texture backs every
- * placeholder so the game always renders.
+ * exists on disk; until then generated textures back every placeholder — a 2x2
+ * white quad tinted at draw time, and a filled circle for the touch widgets — so
+ * the game always renders without shipping any image files.
  */
 public class Assets implements Disposable {
 
     private final AssetManager manager = new AssetManager();
     private Texture white;
+    private Texture circle;
     private BitmapFont font;
 
     /** Loads the handful of assets needed before the first frame. */
@@ -25,6 +27,15 @@ public class Assets implements Disposable {
         pixmap.fill();
         white = new Texture(pixmap);
         pixmap.dispose();
+
+        Pixmap disc = new Pixmap(Constants.CIRCLE_TEXTURE_SIZE, Constants.CIRCLE_TEXTURE_SIZE,
+                Pixmap.Format.RGBA8888);
+        disc.setBlending(Pixmap.Blending.None);
+        disc.setColor(Color.WHITE);
+        int radius = Constants.CIRCLE_TEXTURE_SIZE / 2;
+        disc.fillCircle(radius, radius, radius - 1);
+        circle = new Texture(disc);
+        disc.dispose();
 
         font = new BitmapFont();
         font.setUseIntegerPositions(false);
@@ -39,6 +50,11 @@ public class Assets implements Disposable {
         return white;
     }
 
+    /** Generated filled circle, tinted at draw time for touch widgets. */
+    public Texture circle() {
+        return circle;
+    }
+
     public BitmapFont font() {
         return font;
     }
@@ -47,6 +63,9 @@ public class Assets implements Disposable {
     public void dispose() {
         if (white != null) {
             white.dispose();
+        }
+        if (circle != null) {
+            circle.dispose();
         }
         if (font != null) {
             font.dispose();

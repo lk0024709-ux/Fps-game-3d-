@@ -1,0 +1,44 @@
+package com.brfps.input;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+
+/**
+ * Desktop keyboard + mouse controls: WASD/arrows to move, a held right mouse button
+ * drag to aim (the left button stays free for shooting from master M4, and this
+ * matches the editor camera), Space to jump, Shift to sprint, Ctrl or C to crouch.
+ */
+public class DesktopInputHandler {
+
+    /** Fills the state for this frame. */
+    public void update(InputState out) {
+        float moveX = 0f;
+        float moveY = 0f;
+        if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            moveY += 1f;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            moveY -= 1f;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            moveX += 1f;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            moveX -= 1f;
+        }
+        out.moveX = moveX;
+        out.moveY = moveY;
+
+        out.sprint = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)
+                || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT);
+        out.crouch = Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)
+                || Gdx.input.isKeyPressed(Input.Keys.C);
+        out.jump = Gdx.input.isKeyPressed(Input.Keys.SPACE);
+
+        // Mouse look only while the right button is held, so the cursor stays usable.
+        if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+            out.lookDX = Gdx.input.getDeltaX();
+            out.lookDY = Gdx.input.getDeltaY();
+        }
+    }
+}

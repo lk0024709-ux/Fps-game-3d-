@@ -39,7 +39,7 @@ public final class Constants {
     public static final float ORBIT_RADIUS = 160f;
     public static final float ORBIT_HEIGHT = 120f;
     public static final float ORBIT_SPEED = 12f; // degrees per second
-    public static final float SCREENSHOT_DELAY = 5f; // seconds into GameScreen
+    public static final float SCREENSHOT_DELAY = 5f; // seconds into a world screen
 
     // --- M2 (master) editor view: free-fly camera, world grid, axis gizmos ---
     public static final float EDITOR_SPEED = 12f; // m/s walking speed in the editor
@@ -93,7 +93,30 @@ public final class Constants {
     // --- Camera look ---
     public static final float PITCH_MIN = -80f;
     public static final float PITCH_MAX = 80f;
-    public static final float LOOK_SENSITIVITY = 0.15f;
+    public static final float LOOK_SENSITIVITY = 0.15f; // degrees per pixel, mouse drag
+
+    // --- M3 (master) first-person movement + touch controls ---
+    // sqrt(2 * -GRAVITY * JUMP_HEIGHT) = 4.85 m/s for a 1.2 m jump.
+    public static final float JUMP_VELOCITY = 4.85f;
+    public static final float PLAYER_RADIUS = 0.35f; // collision circle around the feet
+    public static final float STEP_UP_HEIGHT = 0.6f; // walk up ledges this tall without jumping
+    public static final float MAX_STEP_DELTA = 0.05f; // clamped frame step; stops wall tunnelling
+    public static final float BOUNDS_MARGIN = 1f; // kept inside the map edge
+    public static final float TOUCH_LOOK_SENSITIVITY = 0.22f; // degrees per pixel, finger drag
+    // Screen-space sizes are fractions of min(screenWidth, screenHeight) — R46.
+    public static final float SPRINT_STICK_DEFLECTION = 0.92f; // stick pushed this far = sprint
+    public static final float JOYSTICK_RADIUS = 0.11f;
+    public static final float JOYSTICK_HOME_X = 0.17f; // idle stick centre, fraction of width
+    public static final float JOYSTICK_HOME_Y = 0.74f; // idle stick centre, y-down fraction
+    public static final float TOUCH_BUTTON_SIZE = 0.13f;
+    public static final float TOUCH_MARGIN = 0.03f;
+    public static final int CIRCLE_TEXTURE_SIZE = 64; // generated disc for touch widgets
+
+    // --- Main menu (master M3 wiring; scene2d UI arrives with master M44) ---
+    public static final float MENU_BUTTON_HEIGHT = 0.10f; // fraction of the short screen side
+    public static final float MENU_PLAY_Y = 0.50f; // bottom edge, fraction of height (y up)
+    public static final float MENU_EDITOR_Y = 0.37f;
+    public static final float MENU_HINT_Y = 0.20f;
 
     // --- Safe zone ---
     public static final float ZONE_START_RADIUS = 60f;
