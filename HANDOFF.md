@@ -344,3 +344,68 @@ Notes for next model:
 CI: runs `34748242247` (push, code+SPEC+README) + `34748244207` (PR #3) — ✅ green, 62 s,
   artifact `brfps-debug-apk` uploaded; the docs-only follow-up verified again in
   `34748334936` (push) + `34748337590` (PR #3) — ✅ green. PR #3: OPEN, MERGEABLE, 11 commits.
+
+---
+
+## M4 (master) = M5a, M5b (repo) — Shooting: hitscan raycast, bullet holes, crosshair, ammo HUD
+
+Date: 2026-09-13
+Model: Claude (Arena session `01a098fd`)
+Status: ✅ Complete — CI green on the first push of this milestone
+Track: **B** (feel / combat / systems).
+Sequence: **M4 (master) = after M3 (master) = M5a–M5b (repo)** — repo M5a (crosshair +
+  fire button + ammo counter) and M5b (hitscan + damage) ship together; repo M5c
+  (screen shake, muzzle flash, hit marker) is master M5 and is still open.
+
+Files added:
+· `weapons/WeaponController.java` (95 L) — ticks the gun, casts one ray per shot, spawns the decal, counts shots; auto-reloads an empty magazine
+· `world/RayHit.java` (62 L) — reused ray result (distance, point, unit normal, surface kind); `accept()` keeps the nearest candidate
+· `world/ColliderBoxes.java` (137 L) — box baking split out of `BuildingCollider` so both files stay under 300 lines; boxes now carry baseY/topY (8 floats each)
+· `world/ImpactDecals.java` (133 L) — 64 bullet holes in ONE dynamic mesh: ring buffer, only the newest quad's 16 floats re-uploaded per shot, 1 draw call
+· `ui/Crosshair.java` (37 L) — four ticks + dot, dims while reloading
+· `ui/HudData.java` (41 L) — per-frame HUD value snapshot (same pattern as `InputState`)
+· `ui/MatchHud.java` (192 L) — every HUD string, rebuilt only when a shown value changes
+
+Files modified:
+· `world/BuildingCollider.java` (230 L) — now the query side only: `resolve`, `groundHeightAt`, and the new `raycast` (slab test per wall over its real height range + plinth tops + flat ground inside the map bounds)
+· `world/Arena.java` (298 L) — `worldShader()` so decals reuse the already-bound program (never a second one: `Mesh.render` does not bind)
+· `world/MeshKit.java` (126 L) — `attributes()` so the decal mesh shares the vertex layout
+· `util/Math3D.java` — `direction()` rewritten to the project's yaw convention (0 = +X, 90 = +Z) and now the ONLY look-direction formula; `FirstPersonCamera` and `EditorCamera` both call it
+· `util/Constants.java` (164 L) — 12 M4 constants (decal size/offset, fire-button size, ammo HUD scale/position, 5 crosshair values); no `STARTING_RESERVE_AMMO` — the reserve is three magazines, computed in `Weapon`
+· `weapons/Weapon.java` (90 L) — only `getReloadProgress()` added; the M1 file is otherwise untouched
+· `input/InputState.java` — `fire` + `reload`; `DesktopInputHandler` — LMB fire, `R` reload; `TouchInputHandler` (188 L) — large **FIRE** button plus JUMP/CRCH, all three laid out from one set of helpers so hit tests and drawing cannot drift apart; `InputManager` — help text
+· `screens/GameScreen.java` (232 L, was 292) — HUD moved to `ui.MatchHud`, weapon + decals wired in
+· `SPEC.md`, `README.md` — Shooting section, weapons table (reload + recoil columns), UI/HUD "now vs finalized-by" table, known issues 16–18, M4 cost note
+
+What works:
+· Spawn with a Pistol (12 in the magazine, 36 in reserve), aim through the crosshair, hold LMB / **FIRE** to shoot at the weapon's fire rate, `R` or auto-reload when empty; the ammo counter and the dimmed crosshair show the reload.
+· Shots are hitscan against the same boxes the player collides with: walls (over their real height, so a shot can pass over a hut), door jambs, interior partitions, plinth tops and the flat ground inside ±150 m. Nearest hit wins, the rest of the ray is discarded.
+· Every impact leaves a 14 cm bullet hole oriented to the surface, pushed 2 cm off it, oldest overwritten after 64. All holes draw in **one** extra draw call (8 → 9), ≤ 128 triangles.
+· Verified by simulation (no JDK in the sandbox): wall shot stops at 7.50 m with normal (−1,0,0); straight down = GROUND 1.60 m; 45° down = 2.26 m; doorway centre passes the jambs and hits the back wall at 17.80 m; 1 m off centre hits the jamb at 12.00 m; temple plinth = PLINTH 0.50 m; range 5 m cuts a 7.5 m shot; sky and beyond-the-edge shots hit nothing; decal basis gives `u × v == n` for wall and ground normals.
+· `GameScreen` is back to 232/300 lines, so M5 has room for recoil and shake (R13).
+
+What's pending:
+· Damage is not applied to anything — there are no bots yet (master M10 / repo M7a). Insert the bot test **before** the world test in `WeaponController.castShot`.
+· No recoil, muzzle flash, hit marker or screen shake → master M5 (repo M5c). `WeaponType.recoil()` already holds the degrees-per-shot values (pistol 1.2 … sniper 6.0).
+· No gun sounds (master M13; `WeaponType.fireSoundPath()` already builds the paths) and no arms model (master M20; `armsModelPath()`).
+· One ray per weapon: shotgun pellets and the sniper's projectile drop are master M22. Ammo boxes, weapon pickup and switching are master M12 (`PlayerInventory` from M1 already handles two slots).
+
+Known issues:
+· Decals live on world surfaces only; a bot hit will need its own impact feedback (blood/spark) in master M10.
+· The bottom-right corner now holds three buttons (FIRE 0.18, JUMP 0.13, CRCH 0.13 of the short side). On a narrow phone in landscape that row is ~44% of the width — master M5a/M34 should re-lay it out before adding reload/pickup/switch buttons.
+· `raycast` walks all 171 wall boxes per shot. Fine at 12.5 shots/s; if bots shoot too (master M10), add a broad-phase (grid or the existing per-box circle reject) before scaling to 49 bots.
+· Ground is the flat `y = 0` plane plus plinth tops. When master M8 adds hills, `BuildingCollider.castGround` is the single place to change.
+
+Next milestone: user's choice (R4 — wait for "go"). Candidates:
+· **A (recommended)** master M5 (repo M5c) — screen shake + muzzle flash + hit marker + recoil kick using `WeaponType.recoil()`. Suggested model: DeepSeek.
+· B master M10 (repo M7a) — 3 bots that patrol and shoot back; finally applies damage. Suggested model: DeepSeek/Gemini.
+· C master M16 + M17 (repo M2c) — industrial zone + military base. Suggested model: DeepSeek/Gemini.
+· D master M8 (repo M2e) — hills heightmap + carved river + heightfield collision. Suggested model: Gemini.
+Notes for next model:
+· **Check whether a class already exists before writing it.** The M1 skeleton already shipped `weapons/WeaponType`, `weapons/Weapon`, `player/PlayerInventory`, `items/*`, `enemies/BotDifficulty`, `world/SafeZone`, `util/Math3D` and `util/ObjectPool`. This milestone briefly overwrote `WeaponType`/`Weapon` with new versions — the old single-arg `new Weapon(type)` is what `PlayerInventory` calls, so CI would have failed. They were restored from HEAD before pushing. `ls core/src/main/java/com/brfps/*/` first, then extend instead of replacing.
+· `util/Math3D.direction(yaw, pitch, out)` is now the single look-direction formula and uses the project convention (yaw 0 = +X, yaw 90 = +Z). It previously used a different one (yaw 0 = −Z) and nothing called it. Bots and turrets must use it too, or their aim will not match what the player sees.
+· The sandbox has no JDK, so `/home/user/check_java.py` (recreate it if the workspace was re-cloned) statically checks: line limits, balanced braces, `com.brfps.*` imports, `Constants.*` fields, static calls into our classes, and **constructor arity** — that last check is what would have caught the `Weapon` overwrite.
+· Decals must render with `arena.worldShader()` after `arena.render(camera)`; a second `ShaderProgram` corrupts GL state because `Mesh.render` does not bind.
+· `ImpactDecals` uses a dynamic mesh (`new Mesh(false, …)` + `updateVertices`); keep the pool at `Constants.DECAL_POOL_SIZE` and never grow it per shot.
+· Verified against libGDX 1.12.1 sources via `gh api repos/libgdx/libgdx/contents/<path>?ref=1.12.1` (raw.githubusercontent is blocked in the sandbox): `Mesh(boolean,int,int,VertexAttributes)`, `setVertices`, `setIndices`, `updateVertices(int,float[],int,int)`, `render(ShaderProgram,int)`, `Pixmap.Blending`/`setBlending`/`fillCircle` all exist as used (R10).
+CI: runs `34748918185` (push) + `34748918959` (PR #3) — ✅ green, artifact `brfps-debug-apk` uploaded. PR #3: OPEN, MERGEABLE, 14 commits.
