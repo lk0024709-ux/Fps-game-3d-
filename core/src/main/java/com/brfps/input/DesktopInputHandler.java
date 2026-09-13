@@ -6,8 +6,8 @@ import com.badlogic.gdx.Input;
 /**
  * Desktop keyboard + mouse controls: WASD/arrows to move, a held right mouse button
  * drag to aim, left mouse button to fire, R to reload, Space to jump, Shift to
- * sprint, Ctrl or C to crouch. The right button aims (not the left) so the trigger
- * hand is free, matching the editor camera.
+ * sprint, Ctrl or C to crouch, X to sit, Z to go prone. The right button aims (not
+ * the left) so the trigger hand is free, matching the editor camera.
  */
 public class DesktopInputHandler {
 
@@ -34,6 +34,9 @@ public class DesktopInputHandler {
                 || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT);
         out.crouch = Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)
                 || Gdx.input.isKeyPressed(Input.Keys.C);
+        out.sit = Gdx.input.isKeyPressed(Input.Keys.X);
+        out.prone = Gdx.input.isKeyPressed(Input.Keys.Z);
+        out.analogMove = false;
         out.jump = Gdx.input.isKeyPressed(Input.Keys.SPACE);
         out.fire = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         out.reload = Gdx.input.isKeyJustPressed(Input.Keys.R);

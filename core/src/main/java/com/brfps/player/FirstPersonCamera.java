@@ -47,6 +47,22 @@ public class FirstPersonCamera {
     }
 
     /**
+     * Eases the field of view toward the sprint value while sprinting and back to the
+     * base value otherwise; takes effect in the next {@link #apply} (M34 HUD phase A1).
+     */
+    public void updateFov(float delta, boolean sprinting) {
+        float target = sprinting ? Constants.SPRINT_FOV_DEGREES : Constants.FOV_DEGREES;
+        float range = Constants.SPRINT_FOV_DEGREES - Constants.FOV_DEGREES;
+        float step = range / Constants.FOV_TRANSITION_TIME * delta;
+        float current = camera.fieldOfView;
+        if (current < target) {
+            camera.fieldOfView = Math.min(target, current + step);
+        } else if (current > target) {
+            camera.fieldOfView = Math.max(target, current - step);
+        }
+    }
+
+    /**
      * Moves the camera to the player's eyes and points it along yaw/pitch plus this
      * frame's transient view offsets: recoil (master M5, full recovery) and camera
      * shake. The offsets are added to the look direction only — they are never written

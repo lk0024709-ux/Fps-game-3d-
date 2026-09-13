@@ -21,11 +21,20 @@ public class InputState {
     /** Jump requested this frame (touch button or Space). */
     public boolean jump;
 
-    /** Crouch held this frame (touch button, Ctrl or C). */
+    /** Crouch held this frame (touch toggle, Ctrl or C). */
     public boolean crouch;
 
-    /** Sprint requested (Shift, or the stick pushed to full deflection). */
+    /** Sit requested this frame (touch SIT toggle or X). */
+    public boolean sit;
+
+    /** Prone requested this frame (touch SLP toggle or Z). */
+    public boolean prone;
+
+    /** Sprint requested (Shift, the sprint button, or the stick at full deflection). */
     public boolean sprint;
+
+    /** True when moveX/moveY come from the analog stick (jog zone applies). */
+    public boolean analogMove;
 
     /** Trigger held this frame (FIRE button or left mouse button). */
     public boolean fire;
@@ -41,7 +50,10 @@ public class InputState {
         lookDY = 0f;
         jump = false;
         crouch = false;
+        sit = false;
+        prone = false;
         sprint = false;
+        analogMove = false;
         fire = false;
         reload = false;
     }

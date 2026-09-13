@@ -49,10 +49,17 @@ public class InputManager {
         }
     }
 
+    /** Real sprint state for the SPR button glow; a no-op on desktop. */
+    public void setSprinting(boolean sprinting) {
+        if (touchDevice) {
+            touch.setSprintingActive(sprinting);
+        }
+    }
+
     /** One-line control hint for the HUD. */
     public String helpText() {
         return touchDevice
-                ? "stick: move (full = sprint) | drag right: aim | FIRE | JUMP | CRCH"
-                : "WASD move | RMB drag: aim | LMB fire | R reload | SPACE jump | SHIFT sprint";
+                ? "stick: move (mid = jog, full/SPR = sprint) | drag: aim | FIRE JUMP CRCH SPR SIT SLP"
+                : "WASD move | RMB drag: aim | LMB fire | R reload | SPACE jump | SHIFT sprint | C/X/Z crouch/sit/prone";
     }
 }
