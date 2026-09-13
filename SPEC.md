@@ -139,10 +139,11 @@ re-decide that.
 | Touch-look area | right half drag to aim, pitch clamped −80°..+80° | M7 |
 | Action buttons | **FIRE** 0.22 (M34 A2), **JUMP**, **CRCH**, **SPR**, **SIT**, **SLP** + **RLD** / **PACK** / **MEDI x3** (`input/HudButtons`, M34 A2); **SCOPE** greyed | M22 (scope), M12 (pickup) |
 | Perf line `FPS | DC | Tri` (+ `holes`) | top-right, debug builds | removed for release (R43) |
-| Position / collider / shot / recoil readout + control hint | top-right + top-left second lines, debug builds | removed for release |
-| Minimap (top-left) with safe-zone circle | — | M35 |
-| Player counter (top-center, `7 alive`) | — | M11 |
-| Kill feed (top-right) | — | M11 |
+| Position / collider / shot / recoil readout + control hint | bottom-left stack above stance, debug builds (M34 A3) | removed for release |
+| Minimap (top-left) with safe-zone circle | disc + buildings + dotted ring + yaw arrow, tap/`M` zoom (`ui/MinimapView`, M34 A3) | M35 ✅ (early, inside M34) |
+| Compass (top-center) | 8-letter strip + gold caret (`ui/CompassBar`, M34 A3) | M34 ✅ |
+| Player counter (top-center, `7 alive`) | `10 ALIVE` under the compass (M34 A3) | M11 (loop still pending) |
+| Kill feed (top-right) | last 4, 5 s fade, empty until M11 (`ui/KillFeed`, M34 A3) | M11 (events) |
 | Reload / pickup / weapon-switch buttons | **RLD** button + `R`, boxes / `1-4` / `Q` / **PACK** switch (M34 A2); pickup is M12 | M12 (pickup) |
 
 ---
@@ -331,6 +332,11 @@ milestone that fixes it (R49).
     consume + heal path itself works and the MEDI button greys out at zero.
 24. **`input/TouchInputHandler.java` is at 300/300 lines** (R13). The next touch
     feature must go into `HudButtons` (same package) or a new class, never inline.
+25. **The kill feed is empty and the zone ring is display-only** (M34 A3). No damage
+    source exists yet (bots M10, match loop M11), so `KillFeed.addKill` has no caller
+    and the zone never hurts — and note the town spawn (75, 0) sits OUTSIDE the 60 m
+    starting ring, so M11 must re-centre/resize the ring or move spawns before damage
+    goes live.
 
 ## Performance Budget
 
@@ -454,7 +460,7 @@ has no separate repo row (its work is folded into the listed one).
 | M9 | **M2b** | 5+ buildings with interiors → town + village kit | ✅ done |
 | **M2b.5** | — (new, user request) | House **asset** integration: real models replace the procedural kit, one building first then all 32 | planned, waiting for the asset drop |
 | M10 | M7a | 3 bots (patrol + shoot) | not started — needs M3, M4 |
-| M11 | M8 | Match loop (win/lose/restart) | not started |
+| M11 | M8 | Match loop (win/lose/restart) | alive counter ✅ inside M34 A3; the loop itself not started |
 | M12 | M6a, M6b | Loot + inventory | not started |
 | M13 | — (new: sound pass) | Sound pass (all SFX via `SoundManager`) | not started |
 | M14 | M2b (+ M2d props) | Full town: 20 buildings + roads + props | buildings ✅, props pending |
@@ -477,9 +483,9 @@ has no separate repo row (its work is folded into the listed one).
 | M31 | M4 | Landing system (plane, parachute, drop) | not started |
 | M32 | M9a | Main menu | not started |
 | M33 | M9a | Lobby (loadout, character, map select) | not started |
-| M34 | M5a | In-game HUD | A1 ✅ (PR #5) + A2 ✅ (bars, boxes, buttons, loadout, spawn clearance) — A3 pending |
-| M35 | M5a | Minimap + safe zone circle | not started |
-| M36 | M9c | Kill feed + damage numbers | not started |
+| M34 | M5a | In-game HUD | ✅ A1 (PR #5) + A2 (bars/boxes/buttons) + A3 (minimap/compass/feed) |
+| M35 | M5a | Minimap + safe zone circle | ✅ done early inside M34 A3 (disc + zone ring; fullscreen map = Phase B) |
+| M36 | M9c | Kill feed + damage numbers | feed UI ✅ inside M34 A3 (empty until M11); damage numbers pending |
 | M37 | M9c | Post-match screen | not started |
 | M38 | M10 | Graphics tiers | not started |
 | M39 | M11 | Optimization pass | not started |

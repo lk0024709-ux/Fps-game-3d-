@@ -620,3 +620,44 @@ Notes for next model:
 · RLD/SCOPE sit at stack level 2 (same row as SLP); the A3 panel bottom must stay above 0.48 short-side or it covers them.
 · No JDK in the sandbox — `/tmp/check_a2.py` pattern (line limits, braces, Constants refs, import resolve) before every push, then CI (R18).
 CI: run `34763723371` (push, branch `arena/01a09b2c-fps-game-3d`) — ✅ green, artifact `brfps-debug-apk` 8 780 736 bytes.
+
+---
+
+## M34 (master) — HUD phase A3: minimap + compass + alive counter + kill feed
+
+Date: 2026-09-13
+Model: not recorded (Arena session `01a09b2c`)
+Status: ✅ Complete
+Track: **B** (feel / combat / systems) — HUD.
+Sequence: **M34-A3 (master) = after M34-A2 (master)** (same branch, same session).
+
+Files added:
+· `ui/MinimapView.java` (166 L) — top-left disc: baked building footprints, dotted zone ring, yaw arrow (north-up), tap/`M` whole/3x zoom toggle
+· `ui/CompassBar.java` (113 L) — top-centre 8-letter strip + gold caret + `10 ALIVE` counter below
+· `ui/KillFeed.java` (64 L) — top-right last-4 `killer > victim`, 5 s + 1 s fade-out, empty renders nothing
+
+Files modified:
+· `screens/GameScreen.java` (198 → 199 L) — owns feed + minimap, ticks them, passes to the HUD
+· `ui/MatchHud.java` — composes compass/minimap/feed; debug + help moved to a bottom-left stack above the stance
+· `input/InputState.java` — `mapTapped`; `input/HudButtons.java` — minimap disc hit-test + queue; `DesktopInputHandler` — `M` key
+· `input/InputManager.java` — help text; `util/Constants.java` — A3 layout block, `WEAPON_PANEL_TOP` 0.13 → 0.25 (panel under the feed)
+· `SPEC.md` — HUD table, M34/M35/M36/M11 mapping rows, known issue 25
+
+What works:
+· Full HUD in one batch: bars, 4 weapon boxes, RLD/PACK/MEDI (+ greyed SCOPE), compass + alive, minimap + zone ring, kill feed slot, stance/ammo/perf/debug. No new draw calls (all in the HUD batch), zero render-loop allocation.
+· Minimap tap or `M` toggles whole-map / 3x player-centred zoom; buildings + zone ring clip to the disc; arrow tracks aim yaw.
+
+What's pending:
+· Phone test on this APK: minimap/compass/feed positions at 16:9/18:9, zoom toggle, no overlap with boxes/buttons.
+· Kill events (M11), zone damage + ring re-centre (M11 — town spawn is outside the 60 m ring, SPEC #25), fullscreen map (Phase B).
+
+Known issues:
+· Feed is empty until M11 — by design (no kills exist yet), not a bug; `addKill` is the API.
+· Portrait phones: compass strip (0.40 W) and minimap nearly touch — verified by math, needs an eyeball on device.
+
+Next milestone: user's choice (R4 — wait for "go"). HUD track M34 is now complete (A1+A2+A3).
+Suggested model: any
+Notes for next model:
+· `TouchInputHandler` still 300/300 — untouched by A3 on purpose; route new touch widgets through `HudButtons`.
+· RLD/SCOPE row top is 0.48 short-side; anything hung under the weapon panel must stay above it (panel bottom is 0.50).
+CI: run `34763996383` (push, branch `arena/01a09b2c-fps-game-3d`) — ✅ green, artifact `brfps-debug-apk` 8 783 410 bytes.
