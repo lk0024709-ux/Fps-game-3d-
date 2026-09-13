@@ -24,7 +24,11 @@ All dependency versions are pinned — no `+`, no `latest`.
 
 - `core/` — all gameplay code, platform independent (`com.brfps`)
 - `android/` — Android launcher, manifest, resources
-- `assets/` — models, textures, sounds, fonts (shared, served from `android/`)
+- `assets/` — maps, models, textures, sounds, fonts (shared, served from `android/`).
+  Everything the game renders today is generated in code, so `models/`, `textures/`,
+  `sounds/` and `ui/` are still empty; `maps/` holds the JSON layouts and
+  `buildings/` holds the CC0 house models waiting for M2b.5
+  (see `assets/buildings/README.md` for licence, scale and texture notes)
 
 ## Build
 

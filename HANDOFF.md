@@ -441,7 +441,12 @@ Notes for next model:
 · Verified against libGDX 1.12.1 sources through `gh api` (raw.githubusercontent and repo1.maven.org are both blocked in this sandbox; **codeload.github.com works**, so whole-repo tarballs are downloadable if you ever need more than single files): `AudioDevice.writeSamples(short[],int,int)` / `setVolume(float)`, `Audio.newAudioDevice(int,boolean)`, `Pixmap.drawPixel(int,int,int)` / `setBlending`, `SpriteBatch.draw(Texture,x,y,originX,originY,w,h,scaleX,scaleY,rotation)` (the 9-float overload), `Vector3.rotate(float,float,float,float)`, `MathUtils.clamp/random/sinDeg`.
 · `audio` is a new package: keep every placeholder SFX there so master M13 can replace the whole package with `SoundManager` in one diff.
 
-CI: <filled in after the push — see the commit message and the PR checks>
+CI: `34751085438` (push) + `34751120329` (PR #4) — ❌ **red**: `incompatible types:
+  Texture cannot be converted to TextureRegion` (`ui/MuzzleFlash`, `ui/HitMarker`) — the
+  rotated `SpriteBatch.draw` overload takes a **TextureRegion**; fixed by `abf7238`
+  (`Assets.whiteRegion()/glowRegion()`), then `34751301753` (push) + `34751303036`
+  (PR #4) — ✅ **green**, 49 s, artifact `brfps-debug-apk` **8 624 100 bytes = 8.62 MB**
+  (byte-for-byte the M4 size: no image and no sound file was added). PR #4: OPEN.
 
 ---
 
@@ -452,11 +457,13 @@ nahi"). Track A insert between M9 and M16. Scope also lives in
 `SPEC.md → House Asset Integration — M2b.5 (planned)`; this is the working checklist.
 
 **Gate: three answers still missing from the user** — (1) file **format**, (2) **how many**
-buildings, (3) **source + licence**. Format decides the loader:
+buildings, (3) **source + licence** (the agent's starter pack answers all three for its own
+four files: `.glb`, 4 of 32, Kenney CC0 — see *Asset drop, part 1* below). Format decides
+the loader:
 
 | Format | Loads directly? | Work needed |
 |---|---|---|
-| `.glb` | ✅ yes | none — `gdx-gltf` 2.2.1 is already a pinned dependency |
+| `.glb` | ✅ yes | none — `gdx-gltf` 2.2.1 is already a pinned dependency. **But check `images[].uri`**: Kenney's GLB export points at an external `Textures/colormap.png` instead of embedding it |
 | `.gltf` | ✅ yes | none (keep the `.bin` and textures next to it) |
 | `.fbx` | ❌ no | `fbx-conv` → `.g3dj` (R24), or export from Blender |
 | `.obj` | ⚠️ static only | no animation, and libGDX needs `ObjLoader` (verify the 1.12.1 API first) |
@@ -472,8 +479,43 @@ user's own download from kenney.nl / quaternius.com is the realistic source. If 
 arrives as `.fbx`, either convert with `fbx-conv` (R24's documented pipeline) or ask the
 user to re-export as `.glb` — do not add a new dependency to read FBX (R15).
 
+**Asset drop, part 1 — DONE by the agent on 2026-09-13 (this branch, assets only).**
+`kenney.nl` / `quaternius.com` / `sketchfab.com` are unreachable from the sandbox, but a
+GitHub mirror of the Kenney packs is not: **`assets/buildings/` now holds four CC0 houses
+from Kenney's *City Kit Suburban (2.0)*** (`house_small`, `house_medium`,
+`house_two_storey`, `shop` — renamed to `BuildingType` ids), 536 KB, each with a measured
+`info.txt`, plus `assets/buildings/README.md` with the licence text and the numbers below.
+So Phase 1 has a real GLB to chew on even before the user's own download lands; if the
+user's assets differ, they simply replace these folders. Three measured surprises, all
+exactly the risks the user listed:
+
+1. **The texture is NOT embedded** — every GLB declares `images[0].uri =
+   "Textures/colormap.png"`, so the PNG must stay in that subfolder (the ⚠️ case). It is
+   **one 512×512 atlas shared by the whole kit** (the four copies are byte-identical),
+   inside the R12 cap, and each building's UVs use a small sub-rectangle ⇒ at runtime one
+   texture can serve all 32 buildings, which is what makes batching/instancing possible.
+2. **The scale is nowhere near 1 unit = 1 m**: a house is 1.3 units wide. Cross-checked
+   against the same author's Roads kit (street light 0.67 units ≈ 5 m, cone 0.08 ≈ 0.7 m)
+   ⇒ **1 unit ≈ 0.14 m**, so ≈7.2× to reach human scale and then a further per-type factor
+   to hit the `BuildingType` footprints: `house_small` 0.64 (→ 6.0 × 3.4 × 4.2 m),
+   `house_medium` 0.64 (→ 6.0 × 3.8 × 4.8 m), `house_two_storey` 0.55 (→ 7.0 × 4.9 × 4.1 m),
+   `shop` 0.59 (→ 5.6 × 4.9 × 6.0 m). Starting numbers only — the 6 × 4 × 6 m debug
+   reference box decides.
+3. **Orientation unverified**: nodes carry no rotation, and our factory/collider treat
+   local +Z as the front. Must be eyeballed in Phase 1.
+
+Also measured: 770–2062 triangles and 988–3010 vertices per house (short indices are
+safe), one mesh / one primitive / one material each, no animation, no skinning, generator
+"UnityGLTF", `extensionsUsed: [KHR_texture_transform]`. The full kit is 41 GLBs (21
+building types + fences/paths/details, 2.6 MB) and the mirror also has Kenney's
+**Commercial**, **Industrial** and **Roads** packs — the Industrial one is the obvious
+source for master M16/M17. Budget note: 32 buildings × ~1 400 tris ≈ **45k triangles**,
+which alone would eat more than half of the 80k budget (R29) on top of the 6.3k the
+procedural island uses ⇒ Phase 2 needs the low-detail variants (8–26 KB, ~200 tris each)
+for distant buildings, or LOD (master M19).
+
 **Expected layout** (user's machine: `D:\brfps-assets\buildings\`; in-repo target
-`assets/buildings/<name>/<name>.glb` + `info.txt`):
+`assets/buildings/<name>/<name>.glb` + `info.txt`) — already true for the four above:
 
 ```
 assets/buildings/house_medium/house_medium.glb
@@ -500,7 +542,11 @@ assets/buildings/house_medium/info.txt   ← Building, Source URL, Author, Licen
    scale the box, do not hand-place walls.
 6. Re-use the existing `buildings[]` coordinates in `assets/maps/island.layout` unchanged
    for that one entry (data-only, R23/R42).
-7. Deliverable: an **editor-view screenshot** (menu → EDITOR, `debug/screenshot.png`) with
+7. `house_medium` is **not** a `BuildingType` id (the kit has `house_small`,
+   `house_two_storey`, `shop`, `hut`, `temple`, `warehouse`, `factory`, `barracks`), so
+   Phase 1 either maps that GLB onto `house_small` for the test or adds a 9th enum row +
+   layout type (a data change plus one row, R7/R23) — decide with the user, don't invent it.
+8. Deliverable: an **editor-view screenshot** (menu → EDITOR, `debug/screenshot.png`) with
    the reference box visible, plus the DC/tri delta in the HUD.
 
 **Phase 2 — the other 31**, only after Phase 1 is signed off by the user.

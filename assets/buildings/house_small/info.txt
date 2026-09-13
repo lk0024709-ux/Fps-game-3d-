@@ -1,0 +1,50 @@
+Building: house_small
+Source: https://kenney.nl/assets/city-kit-suburban
+Mirrored from: https://github.com/ronmurphy/CityBuilder (folder: models/City Kit - Suburban/Models/GLB format)
+Author: Kenney (www.kenney.nl)
+License: CC0 1.0 (Creative Commons Zero) - https://creativecommons.org/publicdomain/zero/1.0/
+         Personal, educational and commercial use allowed. Credit is NOT required; the
+         pack's own License.txt is quoted in assets/buildings/README.md.
+Pack: City Kit Suburban (2.0), created 23-04-2025
+Original file: building-type-h.glb
+File: house_small.glb (63.8 KB)
+Format: glTF 2.0 binary (.glb), generator "UnityGLTF", extensionsUsed: KHR_texture_transform
+Size: 63.8 KB
+Texture: NOT embedded. images[0].uri = "Textures/colormap.png" (512x512, 11.5 KB, one
+         shared atlas for the whole kit) - the copy in this folder is byte-identical to
+         the other three, so at runtime ONE texture can serve every building.
+         -> This is the "Kenney glTF ships a separate PNG" case from the M2b.5
+            checklist: keep the Textures/ subfolder next to the .glb, or the model loads
+            untextured.
+Triangles: 770
+Vertices: 988 (well under the 32767 short-index limit; indices are UNSIGNED_SHORT)
+Attributes: POSITION, NORMAL, TANGENT, TEXCOORD_0 - one primitive, one material
+            ("colormap", pbrMetallicRoughness baseColorTexture, metallicFactor 0,
+            doubleSided true), one node, one mesh, no animation, no skinning.
+Bounding box (raw model units, y up, base at y = 0, centred on x and z):
+  1.30 x 0.74 x 0.92   (min x -0.65, min z -0.46)
+
+Dimensions (WxHxD):
+  raw, at 1 unit = 1 m (WRONG):      1.3 x 0.7 x 0.9 m  <- a 1.3 m house: the kit
+                                                          is roughly 1/7 scale
+  at the kit scale 7.2:            9.4 x 5.3 x 6.6 m
+  BuildingType target (footprint 6.0 x 5.0 m, wall 3.2 m):
+    suggested scale 0.64  ->  6.0 x 3.4 x 4.2 m
+    (that is scale.set(0.64, 0.90, 0.75) if the footprint and the wall height are
+     fitted independently; uniform 0.64 keeps the roof pitch honest)
+
+Interior: No - a closed shell. The procedural BuildingFactory interiors stay in charge of
+          walkability until master M3c-style refinement; collision for M2b.5 is the
+          existing solid box from BuildingType/BuildingCollider, unchanged.
+Scale: NOT 1 unit = 1 meter. Cross-checked against the same author's Roads kit: a street
+       light is 0.67 units tall (~5 m real => 1 unit ~ 0.13 m), a traffic cone 0.08 units
+       (~0.7 m => 0.11 m), a construction barrier 0.10 x 0.12 x 0.22 units. So the kit
+       sits near 1 unit = 0.14 m, i.e. multiply by ~7.2. VERIFY in the editor view
+       against the 6 x 4 x 6 m debug reference box before placing a second building.
+Orientation: front face NOT verified - the node carries no rotation, and Kenney's
+       convention is usually -Z or +Z front. BuildingFactory/BuildingCollider treat local
+       +Z as the front and rotate by the layout's `rotation`, so Phase 1 must confirm this
+       visually or every doorway faces the wrong way.
+Notes: Single-storey shell. Candidate for the layout's 10 town house_small and, scaled down further, the 8 village huts.
+Downloaded: 2026-09-13 by the Arena agent through api.github.com (kenney.nl itself is not
+       reachable from the sandbox).

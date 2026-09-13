@@ -168,9 +168,20 @@ the channel; the bridge arrives in M2d.
 **Models (`assets/models/`)** — all missing, procedural fallback in use:
 `arms_pistol.g3dj`, `arms_rifle.g3dj`, `arms_smg.g3dj`, `arms_shotgun.g3dj`,
 `arms_sniper.g3dj`, `enemy_body.g3dj`, `arena.g3dj`, `loot_crate.g3dj`,
-`tree.g3dj`. Buildings need **no** model files: since M9 the whole 8-building kit
+`tree.g3dj`. Buildings need **no** model files today: since M9 the whole 8-building kit
 is generated as vertex-colored geometry by `world/BuildingFactory.java`
-(R25 placeholder strategy). Real building art only arrives with the M20 asset swap.
+(R25 placeholder strategy), and that is still what renders.
+
+**Buildings (`assets/buildings/`) — first real art, unused so far.** Four CC0 houses from
+Kenney's *City Kit Suburban (2.0)* landed on 2026-09-13 as the M2b.5 starter pack
+(`house_small`, `house_medium`, `house_two_storey`, `shop`, 536 KB, each folder with its
+`Textures/colormap.png` and a measured `info.txt`; licence + numbers in
+`assets/buildings/README.md`). **No code loads them yet** — the procedural kit keeps
+rendering until M2b.5 Phase 1 imports `house_medium` and verifies scale, texture,
+orientation and collision against a 6 × 4 × 6 m debug reference box. Still missing after
+that: the other 28 placements, the `hut` and `temple` replacements, and everything for
+`warehouse` / `factory` / `barracks` (Kenney's *City Kit Industrial* is the candidate,
+master M16/M17).
 
 **Map content still missing** (procedural, no files needed): village **well** and
 **crop fields** belong to the prop kit (master M18 / repo M2d), as does the bridge
@@ -328,8 +339,15 @@ flash (4 quads), the hit marker (4 quads) and the bloomed crosshair all draw ins
 existing HUD batch, using one new generated 64×64 radial glow (`Assets.glow()`) plus the
 white texture that already existed. Recoil and shake are ~40 float operations per frame
 with no allocation (R6), and the placeholder beep is 4 KB of PCM synthesised once at
-startup on one daemon thread — no sound file ships, so the APK is still 8.6 MB. The
-first-person screen stays at 9 draw calls / ≈6.3k triangles in a match.
+startup on one daemon thread — no sound file ships. Measured in CI: the M5 artifact
+`brfps-debug-apk` is **8 624 100 bytes (8.62 MB)**, the same as M4. The first-person
+screen stays at 9 draw calls / ≈6.3k triangles in a match.
+
+M2b.5 pre-drop cost (assets on disk, nothing loads them yet): **+536 KB** of CC0 house
+GLBs in `assets/buildings/` (4 models + 4 copies of one 11.5 KB shared 512×512 atlas),
+so the next APK is expected at ≈8.7 MB — still far inside the 40 MB cap. Phase 2 must
+deduplicate the atlas at runtime (one texture for all buildings) and watch the triangle
+budget: 32 × ≈1 400 tris ≈ 45k against the 80k limit (R29).
 
 ## Milestone Numbering (read this first)
 
@@ -635,6 +653,33 @@ buildings, and **where they came from** (licence: CC0 preferred — Kenney City 
 Quaternius, KayKit). Note that R24 says `.g3dj`/`.g3db`; loading `.glb` at runtime is a
 deliberate deviation the user asked for, and `fbx-conv` stays the route if a conversion
 pass is ever wanted.
+
+**Part 1 of the asset drop is already in the repo** (2026-09-13, assets only, no code
+reads it yet): `assets/buildings/` holds four **CC0** houses from Kenney's *City Kit
+Suburban (2.0)* renamed to `BuildingType` ids — `house_small`, `house_medium`,
+`house_two_storey`, `shop` — 536 KB total, one folder each with a measured `info.txt`,
+plus `assets/buildings/README.md` carrying the licence text and all the numbers below.
+`kenney.nl` is unreachable from the AI sandbox; they came through `api.github.com` from a
+mirror of the pack. Measured before download, and all three are exactly the risks this
+plan was written around:
+
+| Risk | Measured |
+|---|---|
+| Texture embedding | **Not embedded**: `images[0].uri = "Textures/colormap.png"`, so the PNG must stay in that subfolder. It is **one 512×512 atlas shared by the whole kit** (the four copies are byte-identical), inside the R12 cap, each building using a small UV sub-rectangle ⇒ one texture can serve all 32 buildings, which is what makes one material / one batch possible |
+| Scale | **Not 1 unit = 1 m** — a house is 1.3 units wide. Cross-checked against the same author's Roads kit (street light 0.67 units ≈ 5 m, traffic cone 0.08 ≈ 0.7 m) ⇒ **1 unit ≈ 0.14 m**: ≈7.2× to reach human scale, then a per-type factor to hit the `BuildingType` footprints (`house_small` 0.64 → 6.0 × 3.4 × 4.2 m, `house_medium` 0.64 → 6.0 × 3.8 × 4.8 m, `house_two_storey` 0.55 → 7.0 × 4.9 × 4.1 m, `shop` 0.59 → 5.6 × 4.9 × 6.0 m). Starting numbers — the 6 × 4 × 6 m debug box decides |
+| Orientation | **Unverified**: nodes carry no rotation and our factory/collider treat local +Z as the front. Must be eyeballed in Phase 1 |
+
+Also measured: 770–2062 triangles and 988–3010 vertices per house (short indices safe),
+one mesh / one primitive / one material, `POSITION NORMAL TANGENT TEXCOORD_0`, no
+animation, no skinning, generator "UnityGLTF", `KHR_texture_transform`. The full kit is
+41 GLBs (2.6 MB); the mirror also carries Kenney's **Commercial**, **Industrial** and
+**Roads** packs, which is the obvious source for master M16/M17.
+Budget warning: 32 buildings × ≈1 400 tris ≈ **45k triangles**, more than half of the
+80k budget (R29) on top of today's 6.3k ⇒ Phase 2 must use the kit's `low-detail-*`
+variants (8–26 KB, ≈200 tris) for distant buildings or bring LOD (master M19) forward.
+`house_medium` is also **not** an existing `BuildingType` id: Phase 1 either maps that GLB
+onto `house_small` or adds a 9th type (one enum row + layout data, R7/R23) — the user
+decides.
 
 **Phase 1 — one building, verified before anything else.** Import a single
 `house_medium`, place it at one existing layout coordinate, and check four things side
