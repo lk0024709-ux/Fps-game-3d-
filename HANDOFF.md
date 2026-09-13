@@ -275,3 +275,70 @@ Notes for next model:
   `git reset --mixed <remote tip>` (keeps files) instead of force-pushing.
 CI: runs `34743333496` (push) + `34743335371` (PR #3) — ✅ green after one fix
   commit (`34743245545`/`34743247848` were ❌ red: `cannot find symbol addScaled`).
+
+---
+
+## M3 (master) = M3a, M3b, M3c (repo) — First-person camera + movement + touch controls + building collision
+
+Date: 2026-09-13
+Model: Claude (Arena session `01a098fd`)
+Status: ✅ Complete — CI green on the first push of this milestone
+Track: **B** (feel / combat / systems).
+Sequence: **M3 (master) = after M2 (master) = M3a–M3c (repo)** — the three repo rows
+  M3a (touch controls), M3b (first-person camera) and M3c (movement + collision) are
+  one milestone in the master list, so they ship as one commit pair.
+
+Files added:
+· `player/Player.java` (71 L) — feet position, vertical velocity, stance enum, reused `PlayerStats`
+· `player/MovementController.java` (109 L) — wish direction from yaw + input, walk/sprint/crouch, jump, gravity, step-up, wall push-out, map bounds
+· `player/FirstPersonCamera.java` (76 L) — yaw/pitch look, stance eye height, `direction = (cosYaw·cosPitch, sinPitch, sinYaw·cosPitch)`
+· `world/BuildingCollider.java` (182 L) — 173 oriented boxes baked once from the layout into two flat `float[]`; circle-vs-OBB push-out + `groundHeightAt()`
+· `input/InputState.java` (40 L) — one mutable per-frame snapshot (R6)
+· `input/InputManager.java` (58 L) — `MultitouchScreen` ⇒ touch, else desktop; also owns `lookSensitivity()` and the HUD help line
+· `input/DesktopInputHandler.java` (44 L) — WASD/arrows, RMB-drag look, Space/Shift/Ctrl-C
+· `input/TouchInputHandler.java` (151 L) — 4 pointer slots routed claim-on-press to stick / look area / JUMP / CRCH, and draws the widgets
+· `ui/VirtualJoystick.java` (105 L) — thumb stick that appears where the thumb lands, clamps to radius, sprint at ≥ 92% deflection
+· `ui/TouchLookArea.java` (57 L) — drag accumulator, consumed exactly once per frame
+· `debug/EditorScreen.java` (291 L) — the old orbit + free-fly viewer moved out of `GameScreen` unchanged (M2 deliverable preserved)
+
+Files modified:
+· `screens/GameScreen.java` (292 L) — rewritten as the playable first-person screen: spawn on the first layout spawn point, look → move → collide → apply camera → render world → HUD
+· `screens/MainMenuScreen.java` (175 L) — PLAY and EDITOR buttons (rects laid out in `resize()`, cheap hit tests), ENTER/SPACE and F1 shortcuts, version + player-count line
+· `util/Constants.java` (148 L) — 14 M3 constants (JUMP_VELOCITY 4.85, PLAYER_RADIUS 0.35, STEP_UP_HEIGHT 0.6, MAX_STEP_DELTA 0.05, BOUNDS_MARGIN 1, TOUCH_LOOK_SENSITIVITY 0.22, SPRINT_STICK_DEFLECTION 0.92, JOYSTICK_RADIUS/HOME_X/HOME_Y, TOUCH_BUTTON_SIZE, TOUCH_MARGIN, CIRCLE_TEXTURE_SIZE) + 4 menu constants
+· `util/Assets.java` (75 L) — `circle()`: a generated 64×64 filled disc (`Pixmap.fillCircle`, blending None) for the stick and buttons, disposed with the rest
+· `SPEC.md` — new *First-Person Controls (master M3)* section, known issues 1/2/11/13 rewritten, M3 ✅ in both tables, next candidates re-lettered, M3 cost note in the budget
+· `README.md` — *Playing the game* control table; editor view documented as the menu's EDITOR button
+
+What works:
+· You spawn in the town plaza (75, 0) and can walk, sprint, crouch and jump around the island in first person; eye height switches 1.6 m ↔ 1.0 m with stance.
+· Buildings are solid: walls, the two door jambs and interior partitions stop the player, doorways (1.1 m / 2.2 m) stay walkable, roofs are not climbable.
+· Touch-first (R45): the stick appears where the left thumb lands, the right half aims, JUMP/CRCH sit bottom-right; a pointer keeps whatever widget it first touched, so thumbs never fight. Desktop: WASD + RMB-drag (left button stays free for shooting in M4) + Space/Shift/Ctrl.
+· Temple plinth (0.5 m) and its steps (0.25 m) are walkable *ground*, not walls: `groundHeightAt()` + `STEP_UP_HEIGHT` 0.6 m step assist.
+· Cost: **+0 draw calls, +0 triangles** (world stays at 8 / ≈6 300). Collision is 173 boxes ≈ 4.8 KB of floats built once at load; the touch widgets are 3 quads in the existing HUD batch from one generated 64×64 texture.
+· HUD rebuilds its strings only when a rounded value changes (`HP | AR | STAND/CROUCH/AIR`, `FPS | DC | Tri`, and in debug builds `X Z Y | BOX n` + a control hint), so the render loop still allocates nothing (R6, R30).
+
+What's pending:
+· No crosshair, no shooting, no damage — master M4 + M5 (repo M5a–M5c) is the natural next step and is now unblocked.
+· No head bob, footsteps or sprint FOV — master M6. Basic touch controls shipped here; polish (dead zone, sensitivity setting, haptics) is still master M7.
+· Bots need a player to shoot at: master M10 (repo M7a) is now unblocked too.
+
+Known issues:
+· **`GameScreen` is at 292/300 lines (R13).** M4 must move the HUD out into its own class (e.g. `ui/MatchHud.java`) before adding weapon code — do not grow this file.
+· Collision is height-blind by design (walls are infinite for the player): the player cannot jump onto a roof, but neither can anything else. When M8 adds hills, `groundHeightAt()` must become terrain-aware — it is the single place ground height is decided.
+· Water, the river and the map edge are not hazards yet: the player is clamped at ±149 m and can walk on the sea plane. Drowning/swimming is master M31 (landing) / M40 territory.
+· Verified by simulation, not by running the game (no JDK in the sandbox): 171 wall + 2 plinth boxes; spawn has 10.5 m clearance to the nearest building; walking into `house_two_storey` (86, 6) stops at 3.85 m from its centre = hd 3 + radius 0.35 and slides along the wall; walking through six doorways ends up inside; plinth probes read 0.5 m on the slab, 0.25 m on the steps, 0 m outside.
+
+Next milestone: user's choice (R4 — wait for "go"). Candidates:
+· **A (recommended)** master M4 + M5 (repo M5a–M5c) — crosshair, hitscan raycast, damage, muzzle flash, recoil, screen shake → the game becomes a shooter. Suggested model: DeepSeek.
+· B master M16 + M17 (repo M2c) — industrial zone + military base (kit already has warehouse/factory/barracks). Suggested model: DeepSeek/Gemini.
+· C master M18 (repo M2d) — props, bridge, village well, crop fields. Suggested model: Gemini.
+· D master M8 (repo M2e) — hills heightmap + carved river channel + heightfield collision. Suggested model: Gemini.
+Notes for next model:
+· **The collider must keep mirroring `BuildingFactory`.** Boxes are generated from the same `BuildingType` dimensions and the same local space (local +Z is the front, rotated by `def.rotation`). If you change a wall, door width or partition in the factory, change it here too, or the player will walk through geometry / get stuck in mid-air walls.
+· Yaw convention is shared with `EditorCamera`: yaw 0 = +X, yaw 90 = +Z, `yaw += dX·sensitivity`, `pitch -= dY·sensitivity`. Keep it — the corner orientation gizmo and any future minimap depend on it. Strafe right is `(-sinYaw, 0, cosYaw)` = `cross(direction, up)`.
+· Jump velocity is derived, not guessed: `sqrt(2 · 9.8 · JUMP_HEIGHT 1.2) = 4.85 m/s`. If `JUMP_HEIGHT` changes, recompute `JUMP_VELOCITY`.
+· `MAX_STEP_DELTA` (0.05 s) clamps the movement step — keep it, it is what stops a post-load stall from tunnelling the player through a wall.
+· Adding a screen: `MainMenuScreen` disposes itself before `game.setScreen(...)`; both world screens capture one screenshot 5 s in (`debug/screenshot.png` editor, `debug/firstperson.png` gameplay) and `GameScreen.show()` calls `setCatchBackKey(true)` so BACK returns to the menu on Android.
+· The circle texture is generated at runtime (`Assets.circle()`), so no PNG was added and the APK size is unchanged (8.6 MB debug).
+· No JDK/SDK in the sandbox: CI is the only compiler (R18). This milestone compiled first try — the M2 lesson stuck: verify libGDX 1.12.1 APIs before use (R10), and prefer `set().scl()` + `add()` on reused scratch vectors over methods you cannot check.
+CI: runs `34748242247` (push) + `34748244207` (PR #3) — ✅ green, 62 s, artifact `brfps-debug-apk` uploaded. PR #3: OPEN, MERGEABLE, 10 commits.
