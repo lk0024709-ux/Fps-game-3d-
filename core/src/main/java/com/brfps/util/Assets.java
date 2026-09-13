@@ -5,14 +5,16 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Disposable;
 
 /**
  * Central asset holder. Real art is streamed through the AssetManager once it
  * exists on disk; until then generated textures back every placeholder — a 2x2
  * white quad tinted at draw time, a filled circle for the touch widgets and a radial
- * glow for the muzzle flash (master M5) — so the game always renders without shipping
- * any image file.
+ * glow for the muzzle flash (master M5), each also exposed as a TextureRegion because
+ * libGDX's rotated batch.draw overloads need one — so the game always renders without
+ * shipping any image file.
  */
 public class Assets implements Disposable {
 
@@ -20,6 +22,8 @@ public class Assets implements Disposable {
     private Texture white;
     private Texture circle;
     private Texture glow;
+    private TextureRegion whiteRegion;
+    private TextureRegion glowRegion;
     private BitmapFont font;
 
     /** Loads the handful of assets needed before the first frame. */
@@ -40,6 +44,11 @@ public class Assets implements Disposable {
         disc.dispose();
 
         glow = buildGlow();
+
+        // Rotated batch.draw overloads take a TextureRegion, not a Texture (libGDX
+        // 1.12.1): both regions are built once here so drawing never allocates (R6).
+        whiteRegion = new TextureRegion(white);
+        glowRegion = new TextureRegion(glow);
 
         font = new BitmapFont();
         font.setUseIntegerPositions(false);
@@ -88,6 +97,16 @@ public class Assets implements Disposable {
     /** Generated radial glow for the muzzle flash (master M5). */
     public Texture glow() {
         return glow;
+    }
+
+    /** The white texture as a region, for rotated draws (hit marker). */
+    public TextureRegion whiteRegion() {
+        return whiteRegion;
+    }
+
+    /** The glow as a region, for the rotated muzzle-flash quads. */
+    public TextureRegion glowRegion() {
+        return glowRegion;
     }
 
     public BitmapFont font() {

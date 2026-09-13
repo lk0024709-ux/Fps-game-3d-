@@ -64,8 +64,8 @@ public class MatchHud {
         if (!data.loadFailed) {
             crosshair.render(batch, assets.white(), assets.circle(),
                     worldWidth, worldHeight, data.reloading, data.crosshairBloom);
-            flash.render(batch, assets.glow(), worldWidth, worldHeight);
-            marker.render(batch, assets.white(), worldWidth, worldHeight);
+            flash.render(batch, assets.glowRegion(), worldWidth, worldHeight);
+            marker.render(batch, assets.whiteRegion(), worldWidth, worldHeight);
         }
 
         font.setColor(0.05f, 0.08f, 0.12f, 1f);

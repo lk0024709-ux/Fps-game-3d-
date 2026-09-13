@@ -1,7 +1,7 @@
 package com.brfps.ui;
 
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.brfps.util.Constants;
 
@@ -47,7 +47,8 @@ public class MuzzleFlash {
     }
 
     /** Draws the flash; call between batch.begin() and batch.end(). */
-    public void render(SpriteBatch batch, Texture glow, float screenWidth, float screenHeight) {
+    public void render(SpriteBatch batch, TextureRegion glow,
+                       float screenWidth, float screenHeight) {
         if (remaining <= 0f) {
             return;
         }
@@ -61,23 +62,29 @@ public class MuzzleFlash {
                 * scaleJitter * (0.7f + 0.3f * life);
         float coreSize = glowSize * Constants.MUZZLE_FLASH_CORE_SCALE;
 
+        // The rotated overload is draw(region, x, y, originX, originY, width, height,
+        // scaleX, scaleY, rotation): x/y is the lower-left corner and the origin is
+        // relative to it, so centring means x = centerX - width/2 and origin = width/2.
         batch.setColor(Constants.MUZZLE_FLASH_R, Constants.MUZZLE_FLASH_G,
                 Constants.MUZZLE_FLASH_B, life * Constants.MUZZLE_FLASH_ALPHA);
-        batch.draw(glow, centerX - glowSize * 0.5f, centerY - glowSize * 0.5f,
-                glowSize * 0.5f, glowSize * 0.5f, glowSize, glowSize, 1f, 1f, rotation);
+        drawCentered(batch, glow, centerX, centerY, glowSize, glowSize, rotation);
 
         // Four-point star: the same texture squashed along one axis, then 90 degrees off.
         float starWidth = glowSize * Constants.MUZZLE_FLASH_STAR_LENGTH;
         float starHeight = glowSize * Constants.MUZZLE_FLASH_STAR_THICKNESS;
         batch.setColor(1f, 1f, 0.9f, life * Constants.MUZZLE_FLASH_ALPHA);
-        batch.draw(glow, centerX - starWidth * 0.5f, centerY - starHeight * 0.5f,
-                starWidth * 0.5f, starHeight * 0.5f, starWidth, starHeight, 1f, 1f, rotation);
-        batch.draw(glow, centerX - starHeight * 0.5f, centerY - starWidth * 0.5f,
-                starHeight * 0.5f, starWidth * 0.5f, starHeight, starWidth, 1f, 1f, rotation);
+        drawCentered(batch, glow, centerX, centerY, starWidth, starHeight, rotation);
+        drawCentered(batch, glow, centerX, centerY, starHeight, starWidth, rotation);
 
         batch.setColor(1f, 1f, 1f, life);
-        batch.draw(glow, centerX - coreSize * 0.5f, centerY - coreSize * 0.5f,
-                coreSize * 0.5f, coreSize * 0.5f, coreSize, coreSize, 1f, 1f, rotation + 45f);
+        drawCentered(batch, glow, centerX, centerY, coreSize, coreSize, rotation + 45f);
         batch.setColor(1f, 1f, 1f, 1f);
+    }
+
+    /** One quad centred on a point, rotated around its own centre. */
+    private void drawCentered(SpriteBatch batch, TextureRegion region, float centerX,
+                              float centerY, float width, float height, float rotation) {
+        batch.draw(region, centerX - width * 0.5f, centerY - height * 0.5f,
+                width * 0.5f, height * 0.5f, width, height, 1f, 1f, rotation);
     }
 }

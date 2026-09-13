@@ -383,8 +383,8 @@ Files added:
 · `weapons/RecoilState.java` (123 L) — the transient aim offset: climbs while the trigger is held (slow 3.0/s bleed), decays to **exactly zero** after release, saturates at 14° pitch / 4° yaw, ramps 1.25× from shot 4, deterministic left-right sway + ±0.08° jitter
 · `weapons/WeaponFeel.java` (54 L) — one shot → recoil kick + proportional shake; also the bloom value the crosshair reads (extracted from `GameScreen` ahead of the limit, as the user asked)
 · `player/ScreenShake.java` (77 L) — additive impulses, 14×/s exponential decay, fixed-frequency noise offset + 0.6× roll
-· `ui/MuzzleFlash.java` (83 L) — screen-space glow + squashed star + white core, 70 ms, per-shot rotation and scale jitter
-· `ui/HitMarker.java` (72 L) — four diagonal ticks, 160 ms, sliding outward as they fade
+· `ui/MuzzleFlash.java` (90 L) — screen-space glow + squashed star + white core, 70 ms, per-shot rotation and scale jitter
+· `ui/HitMarker.java` (70 L) — four diagonal ticks, 160 ms, sliding outward as they fade
 · `audio/ShotBeep.java` (110 L) — new `com.brfps.audio` package: 2048 samples (93 ms) of mono PCM synthesised once, streamed on one low-priority **daemon** thread because `AudioDevice.writeSamples` blocks for real time
 · `HANDOFF_ARCHIVE.md` — created now (R48's "keep the last 10" rule): the M1 entry moved there to make room for this one
 
@@ -395,7 +395,7 @@ Files modified:
 · `ui/Crosshair.java` (45 L) — `bloom` parameter widens the tick gap up to 2.5× while the recoil is alive
 · `ui/MatchHud.java` (208 L) — draws the flash and the marker in the same batch, passes the bloom, and the debug line grows `| kick +1.2` while the gun is climbing
 · `ui/HudData.java` — `crosshairBloom`, `hitMarker`, `muzzleFlash`, `recoilPitch`
-· `util/Assets.java` — `glow()`: a generated 64×64 radial gradient (quadratic alpha falloff, POT and inside the 512 cap, R12/R25) — still no image file on disk
+· `util/Assets.java` (132 L) — `glow()`: a generated 64×64 radial gradient (quadratic alpha falloff, POT and inside the 512 cap, R12/R25) — still no image file on disk
 · `BrFpsGame.java` — owns and disposes the one `ShotBeep`
 · `util/Constants.java` (225 L) — 40 M5 constants: recoil (recovery per degree 0.055 + min 0.08 / max 0.40, speed 7.5, hold bleed 3.0, ramp shot 3 × 1.25, pitch cap 14°, yaw alternate 0.12 / jitter 0.08 / cap 4°, bloom 2.5×), shake (0.20 per recoil degree, cap 3.0°, decay 14/s, 1400 °/s noise, roll 0.6), flash (70 ms, anchor 0.50/0.38, size 0.22, star 0.85/0.16, warm colour), marker (160 ms, gap 0.012, spread 0.008), beep (22050 Hz, 2048 samples, 760 Hz + 0.35 octave, decay 42/s, gain 0.45, volume 0.6) and `SOUND_ENABLED`
 · `SPEC.md` — new **Game Feel (master M5)** section (effect order, full-recovery rules, the M20 world-space note the user asked for, shake, flash, beep), new **House Asset Integration — M2b.5 (planned)** section, M5 ✅ in both tables, M2b.5 row added to the mapping table, known issues 1 + 18 rewritten and 19–22 added, M5 cost in the budget, Missing Assets updated
@@ -430,6 +430,14 @@ Notes for next model:
 · One shot event only: `WeaponController.firedThisFrame()` + `getLastShotRecoil()`. Do not poll the trigger for effects, or reload and dry fire will kick the camera.
 · Pure-math classes stay libGDX-free where possible (`RecoilState` uses only `MathUtils`, `ScreenShake` likewise) so they can be ported and simulated: `/home/user/sim_m5.py` is a 1:1 Python port and prints peak climb, settle time and leftover offset per weapon per frame rate. Re-run it after changing any recoil constant.
 · `/home/user/check_java.py` (recreate it if the workspace was re-cloned) statically checks line limits, bracket balance, `com.brfps.*` imports, `Constants.*` fields, constructor arity, method existence **and arity** on our own types — 57 classes, 0 errors before this push. Run it before every push; CI is still the only real compiler (R18).
+· **This milestone broke CI once (run `34751085438`, fixed in the follow-up commit):**
+  `SpriteBatch.draw` has **no** rotated overload taking a `Texture` — the rotated quad is
+  `draw(TextureRegion, x, y, originX, originY, width, height, scaleX, scaleY, rotation)`
+  (10 arguments), and `x/y` is the lower-left corner with the origin relative to it, so
+  centring is `x = cx - w/2, originX = w/2`. `Assets` therefore exposes `whiteRegion()`
+  and `glowRegion()`; an arity check alone cannot catch this because a 10-argument
+  `Texture` overload also exists (`u, v, u2, v2`), so `/home/user/check_java.py` now
+  checks the first argument's type and the positional int/float pattern of that overload.
 · Verified against libGDX 1.12.1 sources through `gh api` (raw.githubusercontent and repo1.maven.org are both blocked in this sandbox; **codeload.github.com works**, so whole-repo tarballs are downloadable if you ever need more than single files): `AudioDevice.writeSamples(short[],int,int)` / `setVolume(float)`, `Audio.newAudioDevice(int,boolean)`, `Pixmap.drawPixel(int,int,int)` / `setBlending`, `SpriteBatch.draw(Texture,x,y,originX,originY,w,h,scaleX,scaleY,rotation)` (the 9-float overload), `Vector3.rotate(float,float,float,float)`, `MathUtils.clamp/random/sinDeg`.
 · `audio` is a new package: keep every placeholder SFX there so master M13 can replace the whole package with `SoundManager` in one diff.
 

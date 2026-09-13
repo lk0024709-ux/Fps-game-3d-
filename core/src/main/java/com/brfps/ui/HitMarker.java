@@ -1,7 +1,7 @@
 package com.brfps.ui;
 
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.brfps.util.Constants;
 
 /**
@@ -39,7 +39,7 @@ public class HitMarker {
     }
 
     /** Draws the marker; call between batch.begin() and batch.end(). */
-    public void render(SpriteBatch batch, Texture white, float screenWidth, float screenHeight) {
+    public void render(SpriteBatch batch, TextureRegion white, float screenWidth, float screenHeight) {
         if (remaining <= 0f) {
             return;
         }
@@ -62,11 +62,9 @@ public class HitMarker {
     }
 
     /** One tick: a thin quad rotated 45 degrees around its own centre. */
-    private void drawTick(SpriteBatch batch, Texture white, float x, float y,
+    private void drawTick(SpriteBatch batch, TextureRegion white, float x, float y,
                           float length, float thickness, float rotation) {
-        float halfX = thickness * 0.5f;
-        float halfY = thickness * 0.5f;
-        batch.draw(white, x - halfX, y - halfY, halfX, halfY,
-                length, thickness, 1f, 1f, rotation);
+        batch.draw(white, x - length * 0.5f, y - thickness * 0.5f,
+                length * 0.5f, thickness * 0.5f, length, thickness, 1f, 1f, rotation);
     }
 }
