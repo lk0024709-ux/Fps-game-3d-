@@ -341,4 +341,6 @@ Notes for next model:
 · Adding a screen: `MainMenuScreen` disposes itself before `game.setScreen(...)`; both world screens capture one screenshot 5 s in (`debug/screenshot.png` editor, `debug/firstperson.png` gameplay) and `GameScreen.show()` calls `setCatchBackKey(true)` so BACK returns to the menu on Android.
 · The circle texture is generated at runtime (`Assets.circle()`), so no PNG was added and the APK size is unchanged (8.6 MB debug).
 · No JDK/SDK in the sandbox: CI is the only compiler (R18). This milestone compiled first try — the M2 lesson stuck: verify libGDX 1.12.1 APIs before use (R10), and prefer `set().scl()` + `add()` on reused scratch vectors over methods you cannot check.
-CI: runs `34748242247` (push) + `34748244207` (PR #3) — ✅ green, 62 s, artifact `brfps-debug-apk` uploaded. PR #3: OPEN, MERGEABLE, 10 commits.
+CI: runs `34748242247` (push, code+SPEC+README) + `34748244207` (PR #3) — ✅ green, 62 s,
+  artifact `brfps-debug-apk` uploaded; the docs-only follow-up verified again in
+  `34748334936` (push) + `34748337590` (PR #3) — ✅ green. PR #3: OPEN, MERGEABLE, 11 commits.
