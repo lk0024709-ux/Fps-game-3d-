@@ -3,6 +3,21 @@
 Newest entry at the **bottom**. Keep the last 10 entries here; move older ones to
 `HANDOFF_ARCHIVE.md` (create that file the first time an entry is evicted).
 
+### Numbering convention (user decision, 2026-09-13 — do not deviate)
+
+- Entry title format: `## M<master> (master) = M<repo> (repo) — <description>`.
+  When a milestone has no repo letter (it is new in the master sequence), write
+  `## M<master> (master) — <description>` and say so in the Sequence line.
+- Every entry carries a `Sequence:` line in the form
+  **`M3 (master) = after M2a (repo)`** — i.e. the master id being worked on and the
+  milestone that precedes it. This is what stops a new model from re-doing or
+  skipping work when the two schemes disagree.
+- Historical entries (M0, M1, M2a) keep their repo ids in the title; they are never
+  renumbered. New entries use master ids (M9, M10, M3, …).
+- Translation source: `SPEC.md → Milestone Mapping Table`. Track (A = world/content,
+  B = feel/combat/systems) is stated in every new entry, because R1 applies inside a
+  track, not across tracks.
+
 Template (also in `RULES.md` → Handoff protocol):
 
 ```
@@ -155,6 +170,8 @@ Date: 2026-09-13
 Model: Claude (Arena session `01a098fd`)
 Status: ✅ Complete
 Track: A (world & content)
+Sequence: **M9 (master) = M2b (repo) = after M2a (repo)** — next in the master
+  sequence is M10, but Track B (M2–M8) has not started; see *Next milestone* below.
 
 Files added:
 · `core/.../world/BuildingType.java` (111 lines) — the fixed 8-building kit: footprint, wall height, roof style, plinth, interior flag, palette

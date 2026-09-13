@@ -244,7 +244,9 @@ they are used so that no model ever has to guess:
    and HANDOFF entries from 2026-09-13 onward are numbered in the master sequence
    (example: `M9: town and village buildings`).
 3. **Docs always show both ids together** — `M9 (master) = M2b (repo)` — so a note
-   written under either scheme can be matched in one lookup.
+   written under either scheme can be matched in one lookup. `HANDOFF.md` entries
+   are titled that way and add a `Sequence:` line, e.g.
+   **`M3 (master) = after M2a (repo)`**.
 4. The **Milestone Mapping Table** below is the single translation source.
 5. **Two tracks run in parallel**, because the repo started with the world while the
    master prompt starts with game feel. The user chose this order on 2026-09-13, so

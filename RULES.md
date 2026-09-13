@@ -52,7 +52,9 @@ Two schemes exist in this repo's history. Use them like this — guessing is not
    Never rename, renumber or rewrite history for them.
 2. **New milestones use master ids M1–M47.** Every new commit, PR title, SPEC row and
    HANDOFF entry uses the master number: `M9: town and village buildings`.
-3. **Docs always show both**, in the form `M9 (master) = M2b (repo)`.
+3. **Docs always show both**, in the form `M9 (master) = M2b (repo)`. HANDOFF entries
+   are titled that way and carry a `Sequence:` line such as
+   **`M3 (master) = after M2a (repo)`** — master id first, then what precedes it.
 4. `SPEC.md → Milestone Mapping Table` is the single translation source. Read it before
    choosing the next milestone; update it when a milestone completes.
 5. **Two parallel tracks** (world/content first in this repo, game feel first in the
