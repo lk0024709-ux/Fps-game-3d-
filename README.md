@@ -57,6 +57,18 @@ Release signing arrives in M10 and not before.
 - [`HANDOFF.md`](HANDOFF.md) — what each previous model built, what works, what is
   pending and which milestone comes next. Read this first.
 
+## Debug / Editor View
+
+Set `Constants.DEBUG_TOOLS_ENABLED = false` for release builds — one switch turns off
+the zone/spawn markers, the chunk grid, the editor camera and its overlays (R43).
+
+Inside the world, press **F1** (desktop) or tap the **CAM** button (top-left) to leave
+the orbit viewer and fly freely: `WASD`/arrows to move, `Q`/`E` down/up, `Shift` fast,
+right-mouse-drag to look. On a phone: drag the left half to fly, drag the right half to
+look, use the **UP**/**DN** buttons for altitude. A 10 m/50 m grid, XYZ axis gizmo at
+the origin and a corner orientation gizmo show where you are. Details: `SPEC.md →
+Editor View (master M2)`.
+
 ## Commit Convention
 
 ```

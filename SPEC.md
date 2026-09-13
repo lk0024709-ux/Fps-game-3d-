@@ -176,9 +176,11 @@ milestone that fixes it (R49).
    arrive in M3a–M3c, M5a–M5c and M7a.
 2. **No collision.** Terrain is flat and buildings (M2b) are visual-only shells
    until M3c — the camera walks straight through walls. Expected, not a bug.
-3. **Debug overlays are ON and split across three booleans** in `Constants`:
-   `DEBUG_SHOW_ZONE_MARKERS`, `DEBUG_SHOW_SPAWN_MARKERS`, `DEBUG_SHOW_CHUNK_GRID`.
-   R43 requires a single boolean; consolidate when quality tiers land (M10).
+3. **Debug overlays are ON**, but since master M2 they all hang off one master switch:
+   `Constants.DEBUG_TOOLS_ENABLED` (R43) gates the zone/spawn markers, the chunk grid,
+   the editor view and the screenshot helper's visibility. Flip that one boolean to
+   false for release. The three sub-flags still exist and should be folded away when
+   quality tiers land (master M38 / repo M10).
 4. **Doc ↔ code drift.** SPEC mentions systems that do not exist yet: `SoundManager`
    (M6d), `LootSpawner` (M6a), `ChunkManager` (M2e), `BotController` (M7a),
    `LocalSaveManager` (M6c). `enemies/BotDifficulty.java` is a placeholder for
@@ -208,7 +210,13 @@ milestone that fixes it (R49).
 12. **One house sits on the river bank.** `house_small` at (100, 6) is 0.25 m from
     the river's 12 m band. Intentional for now; it must be moved or the bank must be
     shaped when master M8/M19 (repo M2e) carves the channel to −1.5 m.
-13. **Shop awnings overhang 1.5 m** past the front wall (and temple steps 1.8 m).
+13. **Editor view screen furniture is temporary.** The CAM button sits top-left (the
+    minimap wants that spot at master M35) and the UP/DN altitude buttons sit
+    bottom-right (the fire button wants that spot at master M5a). Both are debug-only
+    and disappear with `DEBUG_TOOLS_ENABLED`; move or drop them when the real HUD lands.
+14. **Editor mode costs 3 extra draw calls** (grid, world axes, corner gizmo) — 11
+    total instead of 8. Editor mode only, never in a match.
+15. **Shop awnings overhang 1.5 m** past the front wall (and temple steps 1.8 m).
     Placement was validated against roads/river/spawns including that overhang, so
     keep the same margin when adding buildings: `python3`-style clearance ≥ 0 m from
     any road strip, river band or spawn point.
@@ -220,7 +228,7 @@ in-game `FPS | DC | Tri` HUD.
 
 | Resource | Limit | M2a | M9 actual | Reserved plan |
 |---|---|---|---|---|
-| Draw calls / frame | < 80 | 7 | **8** | terrain 1 · roads 1 · water 1 · river 1 · markers 2 · chunk grid 1 · buildings **1** · props 3 · bots 10 · weapon arms 2 · safe-zone wall 1 · decals/particles 4 · HUD ~8 ⇒ **≈37**, headroom ≈43 |
+| Draw calls / frame | < 80 | 7 | **8** (11 in editor mode: +grid, +axes, +corner gizmo) | terrain 1 · roads 1 · water 1 · river 1 · markers 2 · chunk grid 1 · buildings **1** · props 3 · bots 10 · weapon arms 2 · safe-zone wall 1 · decals/particles 4 · HUD ~8 ⇒ **≈37**, headroom ≈43 |
 | Visible triangles | < 80 000 | ≈3 200 | **≈6 300** | terrain 4 000 (18 000 after the M19/M2e heightfield) · buildings **3 094 measured** (12 000 reserved for M16/M17) · props 15 000 · bots 9 000 · weapons 3 000 · safe zone 2 000 · misc 4 000 ⇒ **≈63 000 worst case** |
 | Baked vertices | short indices ⇒ ≤ 32 767 per mesh | n/a | **6 188** (1 mesh, flush limit 24 000 in `Constants.BUILDING_VERTEX_LIMIT`) | each new zone batch flushes automatically before the limit |
 | Frame allocations | 0 | 0 | 0 | all meshes baked at load via `MeshKit`; render path reuses `Color`/`Vector3` fields; bullets, particles and damage numbers pooled (R32) |
@@ -264,14 +272,15 @@ they are used so that no model ever has to guess:
 | M1 | M1 | Project skeleton + CI green | ✅ CI green, `brfps-debug-apk` 8.6 MB |
 | M2a | part of M8 + M14 | Island terrain, zone markers, roads, JSON map layout | ✅ 3.2k tris, 7 draw calls |
 | **M9** | **M9** (= repo M2b) | **Town + village buildings** | ✅ 2026-09-13 — 32 buildings, 3 094 tris, **1** draw call |
+| **M2** | **M2** (no repo letter) | **Editor view** — world grid + XYZ axis gizmo + free-fly camera + corner orientation gizmo | ✅ 2026-09-13 — +3 draw calls in editor mode only |
 
 ### Next candidates — waiting for the user's "go" (R4)
 
 | Pick | Master id | Repo id | Scope | Blocked by |
 |---|---|---|---|---|
 | **A (recommended)** | M3 | M3a, M3b, M3c | First-person camera + walk/sprint/jump/crouch + touch controls — makes the game playable | nothing |
-| B | M16 + M17 | M2c | Industrial zone + military base (continues Track A) | nothing |
-| C | M2 | — | Editor view: world grid + XYZ gizmo + free-fly camera (parked by the user on 2026-09-13) | nothing |
+| B | M4 + M5 | M5a, M5b, M5c | Shooting: crosshair, hitscan raycast, damage, muzzle flash, recoil, screen shake | M3 |
+| C | M16 + M17 | M2c | Industrial zone + military base (continues Track A; warehouse/factory/barracks already in the kit) | nothing |
 | D | M18 | M2d | Props: trees, cars, barrels, crates, bridge, village well + crop fields | nothing |
 
 M14/M15 ("full town" / "full village") are **substantially covered by M9**: the town
@@ -288,7 +297,7 @@ has no separate repo row (its work is folded into the listed one).
 | Master | Repo | Scope (master wording) | Status |
 |---|---|---|---|
 | M1 | M1 | Skeleton + CI | ✅ |
-| M2 | — | Editor view (grid + XYZ axes + free camera) | parked by user |
+| M2 | — (debug package) | Editor view (grid + XYZ axes + free camera) | ✅ done |
 | M3 | M3a, M3b, M3c | First-person camera + movement | next (option A) |
 | M4 | M5a, M5b | Shooting + raycast + hit feedback | not started |
 | M5 | M5c | Screen shake + muzzle flash + hit marker | not started |
@@ -337,6 +346,31 @@ has no separate repo row (its work is folded into the listed one).
 | — | M14+ | Real PvP | explicitly out of scope (R8) |
 
 ---
+
+## Editor View (master M2)
+
+A debug camera for inspecting the map, in `com.brfps.debug` (R44) and gated by
+`Constants.DEBUG_TOOLS_ENABLED` (R43). Toggle it with **F1** on desktop or by tapping
+the **CAM** button top-left on a phone.
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Switch camera | `F1` | tap **CAM** (top-left) |
+| Move | `W A S D` or arrows | drag anywhere on the **left half** (drag = direction + speed) |
+| Altitude | `E` up, `Q` down | **UP** / **DN** buttons (bottom-right) |
+| Look | hold **right mouse button** + drag | drag anywhere on the **right half** |
+| Fast | hold `Shift` (45 m/s vs 12 m/s) | full drag deflection |
+| Leave the world | `Esc` / `Back` | `Back` |
+
+What is drawn in editor mode: a 10 m minor / 50 m major grid over the whole map with a
+bright center cross, an XYZ axis gizmo at the world origin (X red, Y green, Z blue,
+12 m long), a corner orientation gizmo bottom-left showing the camera's current axes,
+and a HUD line with `X Y Z yaw pitch` plus the control help.
+
+Notes for whoever builds the real HUD: yaw 0 looks along +X and yaw 90 along +Z
+(`EditorCamera.direction`), pitch is clamped by `Constants.PITCH_MIN/PITCH_MAX`, the
+far plane widens to 900 m in editor mode and returns to 300 m in orbit mode, and every
+on-screen rectangle is a fraction of `min(screenWidth, screenHeight)` (R46).
 
 ## Multi-Map System (since M2a)
 

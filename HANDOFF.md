@@ -204,11 +204,65 @@ Known issues:
 Next milestone: user's choice (R4 — wait for "go"). Candidates:
 · **A (recommended)** master M3 (repo M3a–M3c) — first-person camera + movement + touch controls → the game becomes playable. Suggested model: DeepSeek.
 · B master M16 + M17 (repo M2c) — industrial zone + military base. Suggested model: DeepSeek/Gemini.
-· C master M2 — editor view (grid + XYZ gizmo + free-fly camera), currently parked. Suggested model: GPT.
-· D master M18 (repo M2d) — props, bridge, village well, crop fields. Suggested model: Gemini.
+· C master M18 (repo M2d) — props, bridge, village well, crop fields. Suggested model: Gemini.
+· (master M2 — editor view — was done next; see the entry below.)
 Notes for next model:
 · Do not inline world geometry into `Arena.java` (289/300 lines, R13) — follow the `BuildingFactory` + `BuildingBatcher` split.
 · `MeshKit` uses short indices: never let one mesh pass 32 767 vertices; `BuildingBatcher` flushes at `Constants.BUILDING_VERTEX_LIMIT` (24 000).
 · `FlatShader` is package-private in `com.brfps.world`; new world renderers must live in that package or take an already-bound `ShaderProgram` (do **not** create a second program — `Mesh.render` does not bind).
 · No JDK/SDK in the sandbox: compile-check by CI only (R18), and keep to libGDX 1.12.1 APIs you can verify (R10).
 CI: run `34738539768` — ✅ green, `assembleDebug` 57 s, artifact `brfps-debug-apk` uploaded
+
+---
+
+## M2 (master) — Editor view: world grid + XYZ gizmo + free-fly camera
+
+Date: 2026-09-13
+Model: Claude (Arena session `01a098fd`)
+Status: ✅ Complete
+Track: tooling (master Phase 0). No repo letter existed for this one, so the commit
+  uses the master id only.
+Sequence: **M2 (master) = after M9 (master) = M2b (repo)** — the user asked for the
+  editor view before the Track B gameplay milestones (M3+).
+
+Files added (all in `com.brfps.debug`, R44):
+· `debug/DebugShader.java` (56 L) — position + packed-color line shader, bindable to a camera or an arbitrary Matrix4
+· `debug/WorldGrid.java` (63 L) — 10 m minor / 50 m major lines + bright center cross, baked once as GL_LINES
+· `debug/AxisGizmo.java` (45 L) — origin axes, 12 m, X red / Y green / Z blue
+· `debug/CornerAxisIndicator.java` (75 L) — orientation gizmo drawn into a small corner glViewport using only the camera's rotation
+· `debug/EditorCamera.java` (292 L) — free-fly controller: keys + mouse on desktop, left-half drag joystick / right-half look / UP-DN buttons on touch
+· `debug/DebugOverlay.java` (88 L) — owns the shader + the three visuals, the CAM toggle hit test, and the draw-call counter
+
+Files modified:
+· `screens/GameScreen.java` (292 L) — toggles orbit ↔ editor (F1 / CAM button), delegates the camera, renders the overlay after the world, HUD shows `X Y Z yaw pitch` + context help + UP/DN/CAM buttons
+· `util/Constants.java` — `DEBUG_TOOLS_ENABLED` master switch (R43) + 18 editor constants (speeds, sensitivity, grid steps, gizmo sizes — all screen sizes are fractions of min(w,h), R46)
+· `world/Arena.java` (292 L) — the three debug-marker flags are now AND-ed with `DEBUG_TOOLS_ENABLED`, so one boolean really does turn all debug visuals off
+· `SPEC.md` — new *Editor View (master M2)* section with the control table, M2 marked ✅, known issues 13–14, performance budget note
+· `README.md` — debug/editor controls documented
+
+What works:
+· Fly anywhere over the island: WASD/arrows + Q/E + Shift (12 / 45 m/s), right-mouse-drag to look, F1 to flip between the orbit viewer and the editor.
+· Touch-first (R45): drag the left half to fly (drag vector = direction + speed, 70 px = full deflection), drag the right half to look, UP/DN buttons for altitude, CAM button top-left to switch modes. Multi-pointer safe (4 pointers tracked, each classified once on press).
+· Grid, origin axes and a corner orientation gizmo show where you are; the HUD prints integer `X Y Z yaw pitch` and only rebuilds its strings when a rounded value changes, so the render path stays allocation-free (R6, R30).
+· Cost: +3 draw calls in editor mode only (8 → 11); all line geometry baked once (grid 62 lines, gizmos 3 lines each).
+
+What's pending:
+· The editor cannot place buildings — layouts are still hand-edited JSON. A pick/place tool would be a separate milestone (not in the master list).
+· No first-person player yet: master M3 (repo M3a–M3c) is the next Track B step.
+
+Known issues:
+· CAM button (top-left) and UP/DN (bottom-right) occupy spots the minimap (master M35) and fire button (master M5a) will want; they vanish with `DEBUG_TOOLS_ENABLED`.
+· The corner gizmo sets `glViewport` and restores it to the full screen; anything drawn after it must call `viewport.apply()` (GameScreen's HUD does).
+· Editor mode widens the far plane to 900 m and restores 300 m on exit — keep that pairing if you add another camera mode.
+
+Next milestone: user's choice (R4 — wait for "go"). Candidates:
+· **A (recommended)** master M3 (repo M3a–M3c) — first-person camera + movement + touch controls → playable. Suggested model: DeepSeek.
+· B master M4 + M5 (repo M5a–M5c) — shooting, hitscan, hit feedback. Needs M3 first. Suggested model: DeepSeek.
+· C master M16 + M17 (repo M2c) — industrial zone + military base. Suggested model: DeepSeek/Gemini.
+· D master M18 (repo M2d) — props, bridge, village well, crop fields. Suggested model: Gemini.
+Notes for next model:
+· Debug code stays in `com.brfps.debug`; `DebugShader` is package-private there, exactly like `FlatShader` in `com.brfps.world` — do not try to share them across packages.
+· Never create a second shader program for meshes drawn inside an existing pass: `Mesh.render` does not bind, so bind once and pass the program (see `BuildingBatcher.render(ShaderProgram)`).
+· `MeshKit` lives in `com.brfps.world` and is public — reuse it for any new baked line/triangle geometry instead of writing new mesh code.
+· No JDK/SDK in the sandbox: CI is the only compiler (R18).
+CI: <filled after this push>
