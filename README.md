@@ -50,8 +50,12 @@ Release signing arrives in M10 and not before.
 
 ## Documentation
 
-- [`SPEC.md`](SPEC.md) — full game design spec, stats tables, milestone status
-  and the list of missing assets.
+- [`SPEC.md`](SPEC.md) — full game design spec, stats tables, milestone status,
+  milestone mapping table, performance budget, known issues, missing assets.
+- [`RULES.md`](RULES.md) — the 50 project rules (R1–R50) plus the handoff protocol
+  and the milestone numbering rule.
+- [`HANDOFF.md`](HANDOFF.md) — what each previous model built, what works, what is
+  pending and which milestone comes next. Read this first.
 
 ## Commit Convention
 
@@ -59,7 +63,12 @@ Release signing arrives in M10 and not before.
 M<number>: <short description>
 ```
 
-Example: `M3: add virtual joystick and player movement`
+Example: `M9: town and village buildings`
+
+New milestones use the master-prompt numbers (M1–M47). The first three commits used
+this repo's older lettered ids (`M1`, `M2a`) and keep them; `SPEC.md → Milestone
+Mapping Table` translates between the two, and docs write both (`M9 (master) =
+M2b (repo)`).
 
 ## License
 
