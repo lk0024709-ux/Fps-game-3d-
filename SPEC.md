@@ -171,11 +171,15 @@ over the river.
 Everything here is known and intentional unless marked **bug**. Each item names the
 milestone that fixes it (R49).
 
-1. **Not playable yet.** `GameScreen` is a world *viewer*: an orbiting debug camera
-   over the island. There is no first-person player, no shooting, no bots. Those
-   arrive in M3a–M3c, M5a–M5c and M7a.
-2. **No collision.** Terrain is flat and buildings (M2b) are visual-only shells
-   until M3c — the camera walks straight through walls. Expected, not a bug.
+1. **Playable, but combat-less.** Since master M3 `GameScreen` is a real
+   first-person screen: spawn, look, walk/sprint/crouch/jump, building collision and
+   touch widgets. There is still no shooting, no crosshair, no bots, no loot and no
+   match loop — those arrive in master M4/M5 (repo M5a–M5c), M10 (repo M7a) and
+   M11/M12.
+2. **Collision covers buildings only.** 173 CPU-side boxes (walls, door jambs,
+   partitions, temple plinth + steps) stop the player; the terrain is still flat, the
+   river and sea are not blockers, props do not exist yet, and roofs are unreachable.
+   Heightfield collision: master M8 (repo M2e). Prop collision: master M18 (M2d).
 3. **Debug overlays are ON**, but since master M2 they all hang off one master switch:
    `Constants.DEBUG_TOOLS_ENABLED` (R43) gates the zone/spawn markers, the chunk grid,
    the editor view and the screenshot helper's visibility. Flip that one boolean to
@@ -200,20 +204,24 @@ milestone that fixes it (R49).
     master prompt's M1–M47). Decided by the user on 2026-09-13: old commits keep
     their repo ids, **new commits use master ids**, and docs always write both
     (`M9 (master) = M2b (repo)`). See *Milestone Numbering* + *Milestone Mapping Table*.
-11. **Buildings are visual-only (M9).** 32 buildings are baked into **one** mesh
-    (6 188 vertices / 3 094 triangles) by `BuildingBatcher`; there is no collision,
-    no occlusion culling and no LOD yet — those arrive with master M3 (repo M3c) and
-    master M19 (repo M2e). Interiors exist only for the large types
+11. **Buildings have collision but no culling (M9 + M3).** 32 buildings are baked into
+    **one** mesh (6 188 vertices / 3 094 triangles) by `BuildingBatcher`, and
+    `BuildingCollider` mirrors the same geometry as 173 oriented boxes for the player.
+    There is no occlusion culling and no LOD yet — those arrive with master M19
+    (repo M2e). Interiors exist only for the large types
     (`house_two_storey`, `shop`, `temple`, and later `warehouse`/`factory`/
     `barracks`) — user decision 2026-09-13; small houses and huts are closed shells
-    with a door panel.
+    with a door panel, so their doorway is blocked by a visual panel **and** by the
+    two jambs only where the panel is: a shell building is not enterable by design.
 12. **One house sits on the river bank.** `house_small` at (100, 6) is 0.25 m from
     the river's 12 m band. Intentional for now; it must be moved or the bank must be
     shaped when master M8/M19 (repo M2e) carves the channel to −1.5 m.
 13. **Editor view screen furniture is temporary.** The CAM button sits top-left (the
     minimap wants that spot at master M35) and the UP/DN altitude buttons sit
-    bottom-right (the fire button wants that spot at master M5a). Both are debug-only
-    and disappear with `DEBUG_TOOLS_ENABLED`; move or drop them when the real HUD lands.
+    bottom-right — the same corner the gameplay JUMP/CRCH buttons already use (master
+    M3). They never overlap in practice because the editor and the match are separate
+    screens, but the real HUD (master M34/M44) owns that corner from now on. Editor
+    furniture is debug-only and disappears with `DEBUG_TOOLS_ENABLED`.
 14. **Editor mode costs 3 extra draw calls** (grid, world axes, corner gizmo) — 11
     total instead of 8. Editor mode only, never in a match.
 15. **Shop awnings overhang 1.5 m** past the front wall (and temple steps 1.8 m).
@@ -239,6 +247,11 @@ in-game `FPS | DC | Tri` HUD.
 Budget rule: if a milestone would push draw calls over 60 or triangles over 70 000,
 batch more aggressively or cut detail **before** committing, and record the number in
 HANDOFF.md.
+
+M3 cost: **0 extra draw calls, 0 extra triangles, 0 extra textures on disk.** Building
+collision is 173 boxes in two flat `float[]` arrays built once at load (≈4.8 KB), and
+the touch widgets are 3 quads from a generated 64×64 circle texture drawn in the
+existing HUD batch. The first-person HUD is text-only for now.
 
 ## Milestone Numbering (read this first)
 
@@ -273,15 +286,16 @@ they are used so that no model ever has to guess:
 | M2a | part of M8 + M14 | Island terrain, zone markers, roads, JSON map layout | ✅ 3.2k tris, 7 draw calls |
 | **M9** | **M9** (= repo M2b) | **Town + village buildings** | ✅ 2026-09-13 — 32 buildings, 3 094 tris, **1** draw call |
 | **M2** | **M2** (no repo letter) | **Editor view** — world grid + XYZ axis gizmo + free-fly camera + corner orientation gizmo | ✅ 2026-09-13 — +3 draw calls in editor mode only |
+| **M3** | **M3** (= repo M3a, M3b, M3c) | **First-person camera + movement + touch controls + building collision** | ✅ 2026-09-13 — +0 draw calls, 173 collision boxes, game is now walkable |
 
 ### Next candidates — waiting for the user's "go" (R4)
 
 | Pick | Master id | Repo id | Scope | Blocked by |
 |---|---|---|---|---|
-| **A (recommended)** | M3 | M3a, M3b, M3c | First-person camera + walk/sprint/jump/crouch + touch controls — makes the game playable | nothing |
-| B | M4 + M5 | M5a, M5b, M5c | Shooting: crosshair, hitscan raycast, damage, muzzle flash, recoil, screen shake | M3 |
-| C | M16 + M17 | M2c | Industrial zone + military base (continues Track A; warehouse/factory/barracks already in the kit) | nothing |
-| D | M18 | M2d | Props: trees, cars, barrels, crates, bridge, village well + crop fields | nothing |
+| **A (recommended)** | M4 + M5 | M5a, M5b, M5c | Shooting: crosshair, hitscan raycast, damage, muzzle flash, recoil, screen shake | nothing (M3 done) |
+| B | M16 + M17 | M2c | Industrial zone + military base (continues Track A; warehouse/factory/barracks already in the kit) | nothing |
+| C | M18 | M2d | Props: trees, cars, barrels, crates, bridge, village well + crop fields | nothing |
+| D | M8 | M2e | Hills: noise heightmap + carved river channel + heightfield collision | nothing |
 
 M14/M15 ("full town" / "full village") are **substantially covered by M9**: the town
 already has 20 buildings on a road grid and the village 12 (8 huts + temple + 3
@@ -298,11 +312,11 @@ has no separate repo row (its work is folded into the listed one).
 |---|---|---|---|
 | M1 | M1 | Skeleton + CI | ✅ |
 | M2 | — (debug package) | Editor view (grid + XYZ axes + free camera) | ✅ done |
-| M3 | M3a, M3b, M3c | First-person camera + movement | next (option A) |
-| M4 | M5a, M5b | Shooting + raycast + hit feedback | not started |
+| M3 | M3a, M3b, M3c | First-person camera + movement (+ touch controls, + building collision) | ✅ done |
+| M4 | M5a, M5b | Shooting + raycast + hit feedback | next (option A) |
 | M5 | M5c | Screen shake + muzzle flash + hit marker | not started |
 | M6 | — (folded into M3c) | Head bob + footsteps + sprint FOV | not started |
-| M7 | M3a | Touch controls polish | not started |
+| M7 | M3a | Touch controls **polish** (dead zone, sensitivity setting, haptics) — basic touch controls already shipped inside M3 | not started |
 | M8 | M2e | Hills terrain + noise heightmap + lighting | not started |
 | M9 | **M2b** | 5+ buildings with interiors → town + village kit | ✅ done |
 | M10 | M7a | 3 bots (patrol + shoot) | not started — needs M3, M4 |
@@ -346,6 +360,54 @@ has no separate repo row (its work is folded into the listed one).
 | — | M14+ | Real PvP | explicitly out of scope (R8) |
 
 ---
+
+## First-Person Controls (master M3, repo M3a–M3c)
+
+`GameScreen` is the playable screen; `debug/EditorScreen` keeps the old orbit/free-fly
+viewer behind the main menu's **EDITOR** button (debug builds only).
+
+| Control | Desktop | Touch |
+|---|---|---|
+| Move | `W A S D` or arrows | virtual stick on the **left half** (appears where the thumb lands) |
+| Look / aim | hold **right mouse button** + drag | drag anywhere on the **right half** |
+| Sprint | hold `Shift` (7 m/s) | push the stick to ≥ 92% deflection |
+| Crouch | `Ctrl` or `C` (2 m/s, eye 1.0 m) | **CRCH** button (bottom-right) |
+| Jump | `Space` (1.2 m ⇒ 4.85 m/s) | **JUMP** button (bottom-right) |
+| Leave the match | `Esc` / `Back` | `Back` |
+
+| Class | Package | Job |
+|---|---|---|
+| `Player` | `player` | feet position, vertical velocity, stance (`STAND`/`CROUCH`), `PlayerStats` |
+| `MovementController` | `player` | wish direction from yaw + input, speeds, jump, gravity, step-up, wall push-out, map bounds |
+| `FirstPersonCamera` | `player` | yaw/pitch look + stance eye height → shared `PerspectiveCamera` |
+| `BuildingCollider` | `world` | 173 oriented boxes baked once from the layout; circle-vs-OBB resolve + `groundHeightAt` |
+| `InputState` | `input` | one mutable frame snapshot (never allocated per frame) |
+| `InputManager` | `input` | picks the scheme (`MultitouchScreen` ⇒ touch) and forwards |
+| `DesktopInputHandler` | `input` | keyboard + right-button mouse drag |
+| `TouchInputHandler` | `input` | routes 4 pointer slots to stick / look / JUMP / CRCH, draws the widgets |
+| `VirtualJoystick`, `TouchLookArea` | `ui` | thumb stick and drag-to-aim accumulator |
+
+Rules worth keeping:
+
+- **Pointer routing is claim-on-press**: a pointer keeps the widget it first touched
+  until it lifts, so a thumb on the stick never also aims, and the two buttons win over
+  the half-screen areas.
+- **Collision boxes mirror `BuildingFactory` exactly** (same local space, same wall
+  thickness, front wall split into two jambs around `doorWidth()`), so a doorway that
+  is visually open is also walkable and interiors stay enterable. Lintels and roofs are
+  deliberately not colliders — the player cannot climb onto a roof.
+- **Plinths are walkable ground**, not walls: `groundHeightAt` returns the temple
+  plinth (0.5 m) and its front steps (0.25 m), and `STEP_UP_HEIGHT` (0.6 m) lets the
+  player walk up without jumping.
+- **`MAX_STEP_DELTA` (0.05 s) clamps the frame step** so a stall after a load cannot
+  tunnel the player through a wall.
+- Yaw 0 looks along +X and yaw 90 along +Z — the same convention as `EditorCamera`, so
+  the corner orientation gizmo and any future minimap keep working unchanged.
+- All sizes are fractions of `min(screenWidth, screenHeight)` (R46): stick radius 0.11,
+  buttons 0.13, margin 0.03, idle stick at (0.17, 0.74).
+- The HUD draws `HP | AR | STAND/CROUCH/AIR` top-left, `FPS | DC | Tri` top-right, and
+  (debug builds) `X Z Y | BOX n` plus a one-line control hint. Strings are rebuilt only
+  when a displayed value changes, so the render loop allocates nothing (R6).
 
 ## Editor View (master M2)
 
