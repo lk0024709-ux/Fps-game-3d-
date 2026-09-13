@@ -16,12 +16,15 @@ import com.brfps.player.FirstPersonCamera;
 import com.brfps.player.MovementController;
 import com.brfps.player.Player;
 import com.brfps.player.PlayerStats;
+import com.brfps.ui.HitMarker;
 import com.brfps.ui.HudData;
 import com.brfps.ui.MatchHud;
+import com.brfps.ui.MuzzleFlash;
 import com.brfps.util.Constants;
 import com.brfps.util.ScreenshotUtil;
 import com.brfps.weapons.Weapon;
 import com.brfps.weapons.WeaponController;
+import com.brfps.weapons.WeaponFeel;
 import com.brfps.weapons.WeaponType;
 import com.brfps.world.Arena;
 import com.brfps.world.BuildingCollider;
@@ -31,11 +34,12 @@ import com.brfps.world.MapRegistry;
 import com.brfps.world.SpawnPoint;
 
 /**
- * The playable first-person screen (master M3 + M4, repo M3a-M3c / M5a-M5b): loads the
- * map, drops the player on a spawn point, then runs look, movement, building collision,
- * hitscan shooting and the touch widgets every frame. Drawing the HUD lives in
- * {@code ui.MatchHud} so this class stays inside the 300-line limit (R13). Bots, the
- * match loop and recoil feedback arrive in later milestones.
+ * The playable first-person screen (master M3-M5, repo M3a-M3c / M5a-M5c): loads the
+ * map, drops the player on a spawn point, then runs the frame in the fixed effect order
+ * <b>look -> movement -> recoil -> shake -> camera apply -> weapons</b>, so movement
+ * always sees the base yaw and a shot can never push the player around. Weapon feel
+ * lives in {@code weapons.WeaponFeel} and the HUD in {@code ui.MatchHud} to keep this
+ * class inside the 300-line limit (R13). Bots and the match loop arrive later.
  */
 public class GameScreen implements Screen {
 
@@ -47,6 +51,9 @@ public class GameScreen implements Screen {
     private final MovementController movement;
     private final ImpactDecals decals;
     private final WeaponController weapons;
+    private final WeaponFeel feel = new WeaponFeel();
+    private final MuzzleFlash muzzleFlash = new MuzzleFlash();
+    private final HitMarker hitMarker = new HitMarker();
     private final InputManager input = new InputManager();
     private final InputState inputState = new InputState();
     private final MatchHud hud = new MatchHud();
@@ -125,12 +132,7 @@ public class GameScreen implements Screen {
         }
 
         if (!loadFailed) {
-            input.update(inputState);
-            view.look(inputState.lookDX, inputState.lookDY, input.lookSensitivity());
-            movement.update(delta, inputState, view.getYaw());
-            view.apply(player);
-            weapons.update(delta, inputState.fire, inputState.reload,
-                    camera.position, camera.direction);
+            updateGameplay(delta);
         }
 
         Gdx.gl.glClearColor(0.55f, 0.75f, 0.92f, 1f);
@@ -145,6 +147,34 @@ public class GameScreen implements Screen {
         maybeCaptureScreenshot();
     }
 
+    /** One frame of gameplay, in the effect order documented on the class. */
+    private void updateGameplay(float delta) {
+        input.update(inputState);
+        view.look(inputState.lookDX, inputState.lookDY, input.lookSensitivity());
+        movement.update(delta, inputState, view.getYaw()); // base yaw: before any offset
+        feel.update(delta, inputState.fire); // recoil recovers first, then shake decays
+        muzzleFlash.update(delta);
+        hitMarker.update(delta);
+        view.apply(player, feel.getShake().offsetX(),
+                feel.getRecoil().pitchOffset() + feel.getShake().offsetY(),
+                feel.getShake().roll());
+        weapons.update(delta, inputState.fire, inputState.reload,
+                camera.position, camera.direction);
+        if (weapons.firedThisFrame()) {
+            onShot();
+        }
+    }
+
+    /** One shot event: camera kick, flash, hit marker and the placeholder crack. */
+    private void onShot() {
+        feel.onShot(weapons.getLastShotRecoil());
+        muzzleFlash.fire();
+        if (weapons.getLastHit().hit) {
+            hitMarker.show();
+        }
+        game.getShotBeep().play();
+    }
+
     /** Touch widgets first, then the match HUD on top of them. */
     private void renderHud() {
         viewport.apply();
@@ -155,7 +185,8 @@ public class GameScreen implements Screen {
         batch.begin();
         input.render(batch, game.getAssets().circle(), game.getAssets().font(),
                 worldWidth, worldHeight);
-        hud.render(batch, game.getAssets(), hudData, worldWidth, worldHeight);
+        hud.render(batch, game.getAssets(), hudData, muzzleFlash, hitMarker,
+                worldWidth, worldHeight);
         batch.end();
     }
 
@@ -190,6 +221,8 @@ public class GameScreen implements Screen {
         hudData.shotsFired = weapons.getShotsFired();
         hudData.shotsOnTarget = weapons.getShotsOnTarget();
         hudData.lastHitDistance = weapons.getLastHitDistance();
+        hudData.crosshairBloom = feel.getBloom();
+        hudData.recoilPitch = feel.getRecoil().pitchOffset();
     }
 
     private void maybeCaptureScreenshot() {

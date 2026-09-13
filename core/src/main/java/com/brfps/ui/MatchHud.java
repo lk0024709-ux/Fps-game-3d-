@@ -8,10 +8,11 @@ import com.brfps.util.Constants;
 
 /**
  * The match HUD, extracted from GameScreen so that screen stays inside the 300-line
- * limit (R13): crosshair, ammo counter, health/armor/stance, performance line and —
- * in debug builds — the position, collider and shooting readout plus a control hint.
- * Each string is rebuilt only when a value it shows actually changes, so the render
- * loop allocates nothing (R6, R30).
+ * limit (R13): crosshair (with the master M5 recoil bloom), muzzle flash, hit marker,
+ * ammo counter, health/armor/stance, performance line and — in debug builds — the
+ * position, collider, recoil and shooting readout plus a control hint. Each string is
+ * rebuilt only when a value it shows actually changes, so the render loop allocates
+ * nothing (R6, R30).
  */
 public class MatchHud {
 
@@ -47,16 +48,24 @@ public class MatchHud {
     private int lastShots = -1;
     private int lastHits = -1;
     private int lastHitDecimeters = -1;
+    private int lastRecoilTenths = -1;
 
-    /** Draws the whole HUD; call between batch.begin() and batch.end(). */
+    /**
+     * Draws the whole HUD; call between batch.begin() and batch.end(). The shot widgets
+     * are owned by the screen (they are fired from the same event that kicks the recoil)
+     * and only drawn here, so all screen-space feedback stays in one batch (R28).
+     */
     public void render(SpriteBatch batch, Assets assets, HudData data,
+                       MuzzleFlash flash, HitMarker marker,
                        float worldWidth, float worldHeight) {
         BitmapFont font = assets.font();
         font.getData().setScale(1f);
 
         if (!data.loadFailed) {
             crosshair.render(batch, assets.white(), assets.circle(),
-                    worldWidth, worldHeight, data.reloading);
+                    worldWidth, worldHeight, data.reloading, data.crosshairBloom);
+            flash.render(batch, assets.glowRegion(), worldWidth, worldHeight);
+            marker.render(batch, assets.whiteRegion(), worldWidth, worldHeight);
         }
 
         font.setColor(0.05f, 0.08f, 0.12f, 1f);
@@ -154,20 +163,23 @@ public class MatchHud {
         return perfString;
     }
 
-    /** Feet position, collider size and shot statistics (debug builds only). */
+    /** Feet position, collider size, live recoil and shot statistics (debug builds). */
     private String buildDebugString(HudData data) {
         int x = Math.round(data.positionX);
         int z = Math.round(data.positionZ);
         int yTenths = Math.round(data.positionY * 10f);
         int hitDecimeters = Math.round(data.lastHitDistance * 10f);
+        int recoilTenths = Math.round(data.recoilPitch * 10f);
         if (x != lastX || yTenths != lastY || z != lastZ || data.shotsFired != lastShots
-                || data.shotsOnTarget != lastHits || hitDecimeters != lastHitDecimeters) {
+                || data.shotsOnTarget != lastHits || hitDecimeters != lastHitDecimeters
+                || recoilTenths != lastRecoilTenths) {
             lastX = x;
             lastY = yTenths;
             lastZ = z;
             lastShots = data.shotsFired;
             lastHits = data.shotsOnTarget;
             lastHitDecimeters = hitDecimeters;
+            lastRecoilTenths = recoilTenths;
             debugBuilder.setLength(0);
             debugBuilder.append("X ").append(x)
                     .append("  Z ").append(z)
@@ -178,6 +190,10 @@ public class MatchHud {
                     .append(Math.abs(hitDecimeters % 10)).append(" m")
                     .append(" | shots ").append(data.shotsOnTarget).append('/')
                     .append(data.shotsFired);
+            if (recoilTenths != 0) {
+                debugBuilder.append(" | kick +").append(recoilTenths / 10).append('.')
+                        .append(Math.abs(recoilTenths % 10));
+            }
             debugString = debugBuilder.toString();
         }
         return debugString;

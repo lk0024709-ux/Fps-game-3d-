@@ -49,48 +49,6 @@ CI: <run id / green-red>
 
 ---
 
-## M1 — Project skeleton, libGDX setup, CI debug APK workflow
-
-Date: 2026-09-12
-Model: not recorded (Arena session `01a0964f`)
-Status: ✅ Complete
-
-Files added:
-· `.github/workflows/build.yml`, `.gitignore`, `LICENSE`, `README.md`, `SPEC.md`
-· `build.gradle`, `settings.gradle`, `gradle.properties`, `gradlew`, `gradlew.bat`, `gradle/wrapper/*`
-· `android/build.gradle`, `android/proguard-rules.pro`, `android/src/main/AndroidManifest.xml`
-· `android/src/main/java/com/brfps/android/AndroidLauncher.java`, `android/src/main/res/**` (launcher icons, strings, styles)
-· `core/build.gradle`
-· `core/src/main/java/com/brfps/BrFpsGame.java`
-· `core/.../screens/SplashScreen.java`, `MainMenuScreen.java`, `GameScreen.java`
-· `core/.../util/Assets.java`, `Constants.java`, `Math3D.java`, `ObjectPool.java`
-· `core/.../weapons/Weapon.java`, `WeaponType.java`
-· `core/.../items/Item.java`, `ItemType.java`
-· `core/.../player/PlayerStats.java`, `PlayerInventory.java`
-· `core/.../enemies/BotDifficulty.java`
-· `assets/{models,textures,sounds,ui}/.gitkeep`
-
-Files modified:
-· (none — first commit of the tree)
-
-What works:
-· `./gradlew android:assembleDebug` succeeds in CI; artifact `brfps-debug-apk` ≈8.6 MB (14-day retention).
-· Splash → Main Menu → GameScreen(placeholder) → back, on both desktop and Android; all versions pinned (libGDX 1.12.1, gdx-bullet 1.12.1, gdx-gltf 2.2.1, Gradle 8.7, AGP 8.5.0, JDK 17, minSdk 24, target/compile 34).
-
-What's pending:
-· No gameplay yet — no player controller, no world, no bots.
-
-Known issues:
-· `gdx-gltf` 2.2.0 had no published JitPack artifact; pinned to **2.2.1** instead (R9).
-
-Next milestone: M2a — island terrain + zone markers + roads + JSON map layout
-Suggested model: DeepSeek (geometry / math)
-Notes for next model:
-· AndroidManifest has zero permissions and must stay that way (R21).
-CI: run `34705239770` — ✅ green
-
----
-
 ## M2a — Island terrain, zone markers, roads, JSON map layout
 
 Date: 2026-09-12
@@ -409,3 +367,204 @@ Notes for next model:
 · `ImpactDecals` uses a dynamic mesh (`new Mesh(false, …)` + `updateVertices`); keep the pool at `Constants.DECAL_POOL_SIZE` and never grow it per shot.
 · Verified against libGDX 1.12.1 sources via `gh api repos/libgdx/libgdx/contents/<path>?ref=1.12.1` (raw.githubusercontent is blocked in the sandbox): `Mesh(boolean,int,int,VertexAttributes)`, `setVertices`, `setIndices`, `updateVertices(int,float[],int,int)`, `render(ShaderProgram,int)`, `Pixmap.Blending`/`setBlending`/`fillCircle` all exist as used (R10).
 CI: runs `34748918185` (push) + `34748918959` (PR #3) — ✅ green, artifact `brfps-debug-apk` uploaded. PR #3: OPEN, MERGEABLE, 14 commits.
+
+---
+
+## M5 (master) = M5c (repo) — Game feel: full-recovery recoil, camera shake, muzzle flash, hit marker, placeholder gunshot
+
+Date: 2026-09-13
+Model: Claude (Arena session `01a09a2f`)
+Status: ✅ Complete
+Track: **B** (feel / combat / systems).
+Sequence: **M5 (master) = after M4 (master) = M5c (repo)** — the user approved the M5
+  plan with five changes on 2026-09-13 and said go; all five are in this commit.
+
+Files added:
+· `weapons/RecoilState.java` (123 L) — the transient aim offset: climbs while the trigger is held (slow 3.0/s bleed), decays to **exactly zero** after release, saturates at 14° pitch / 4° yaw, ramps 1.25× from shot 4, deterministic left-right sway + ±0.08° jitter
+· `weapons/WeaponFeel.java` (54 L) — one shot → recoil kick + proportional shake; also the bloom value the crosshair reads (extracted from `GameScreen` ahead of the limit, as the user asked)
+· `player/ScreenShake.java` (77 L) — additive impulses, 14×/s exponential decay, fixed-frequency noise offset + 0.6× roll
+· `ui/MuzzleFlash.java` (90 L) — screen-space glow + squashed star + white core, 70 ms, per-shot rotation and scale jitter
+· `ui/HitMarker.java` (70 L) — four diagonal ticks, 160 ms, sliding outward as they fade
+· `audio/ShotBeep.java` (110 L) — new `com.brfps.audio` package: 2048 samples (93 ms) of mono PCM synthesised once, streamed on one low-priority **daemon** thread because `AudioDevice.writeSamples` blocks for real time
+· `HANDOFF_ARCHIVE.md` — created now (R48's "keep the last 10" rule): the M1 entry moved there to make room for this one
+
+Files modified:
+· `screens/GameScreen.java` (265 L) — `updateGameplay()` encodes the effect order the user called critical: `input → view.look → movement(base yaw) → feel.update → view.apply(recoil+shake+roll) → weapons.update → onShot()`; `onShot()` fans one shot event out to recoil, shake, flash, marker and beep
+· `player/FirstPersonCamera.java` (86 L) — `apply(player, yawOffset, pitchOffset, rollDegrees)`: offsets are added to the look direction for one frame only and **never** written into `yaw`/`pitch`, which is what makes recovery exact; roll rotates `camera.up` around the direction
+· `weapons/WeaponController.java` (114 L) — `firedThisFrame()` + `getLastShotRecoil()`: the single shot event every effect hangs off (no trigger polling, so reload and dry fire cannot kick)
+· `ui/Crosshair.java` (45 L) — `bloom` parameter widens the tick gap up to 2.5× while the recoil is alive
+· `ui/MatchHud.java` (208 L) — draws the flash and the marker in the same batch, passes the bloom, and the debug line grows `| kick +1.2` while the gun is climbing
+· `ui/HudData.java` — `crosshairBloom`, `hitMarker`, `muzzleFlash`, `recoilPitch`
+· `util/Assets.java` (132 L) — `glow()`: a generated 64×64 radial gradient (quadratic alpha falloff, POT and inside the 512 cap, R12/R25) — still no image file on disk
+· `BrFpsGame.java` — owns and disposes the one `ShotBeep`
+· `util/Constants.java` (225 L) — 40 M5 constants: recoil (recovery per degree 0.055 + min 0.08 / max 0.40, speed 7.5, hold bleed 3.0, ramp shot 3 × 1.25, pitch cap 14°, yaw alternate 0.12 / jitter 0.08 / cap 4°, bloom 2.5×), shake (0.20 per recoil degree, cap 3.0°, decay 14/s, 1400 °/s noise, roll 0.6), flash (70 ms, anchor 0.50/0.38, size 0.22, star 0.85/0.16, warm colour), marker (160 ms, gap 0.012, spread 0.008), beep (22050 Hz, 2048 samples, 760 Hz + 0.35 octave, decay 42/s, gain 0.45, volume 0.6) and `SOUND_ENABLED`
+· `SPEC.md` — new **Game Feel (master M5)** section (effect order, full-recovery rules, the M20 world-space note the user asked for, shake, flash, beep), new **House Asset Integration — M2b.5 (planned)** section, M5 ✅ in both tables, M2b.5 row added to the mapping table, known issues 1 + 18 rewritten and 19–22 added, M5 cost in the budget, Missing Assets updated
+· `README.md` — new **Gun feel** subsection under *Playing the game*
+
+What works:
+· Firing now feels like firing: the view climbs by the weapon's recoil (pistol 1.2°/shot) with a left-right sway that widens down the burst, harder from shot 4; the crosshair blooms open; a warm flash pops for 70 ms; a short crack plays; any impact flashes a hit marker for 160 ms; the camera shakes and rolls proportionally (shotgun 4.5° kick ⇒ 0.9° of shake, pistol ⇒ 0.24°).
+· **Full recovery, as specified**: let go and the aim returns to exactly the point you were holding — verified 0.0000° of leftover pitch *and* yaw for all five weapons at 60/30/20 Hz. Nothing is transferred into the stored aim, so there is no partial-transfer constant to argue about.
+· Sprays stay controllable: SMG plateaus at 5.5° after ~10 rounds (held-bleed equilibrium), rifle at 5.0°, and the 14° cap means an endless spray cannot end up pointing at the sky. Recovery time scales with the weapon: pistol 0.17 s, shotgun 0.32 s, sniper 0.40 s.
+· Cost: **+0 draw calls, +0 triangles** — flash (4 quads), marker (4 quads) and crosshair all draw inside the existing HUD batch with one new generated 64×64 glow; ~40 float ops per frame, zero allocation (R6/R30). APK still 8.6 MB: no image and no sound file was added.
+
+What's pending:
+· Arms model, viewmodel kick and the **world-space** muzzle attach point: master M20 (SPEC records the shift, the flash class survives as the fallback).
+· Bullet spread: recoil moves the camera and the ray follows it, but there is no spread cone yet — master M22. `RecoilState.intensity()` is already the 0..1 value a cone should read.
+· Real gun samples per weapon: master M13 deletes `audio/ShotBeep` entirely.
+· Head bob, footsteps and sprint FOV: master M6 — they should reuse the same `apply()` offsets.
+· The hit marker only ever means "the world took a bullet hole" until bots exist (master M10).
+
+Known issues:
+· The flash is anchored to a fixed screen fraction (0.50, 0.38), so it reads as detached while crouching or looking straight down. Deliberate until M20 (SPEC known issue 19).
+· One beep for all five weapons, and requests coalesce, so an SMG spray sounds like a buzz rather than 12.5 distinct cracks. Placeholder by design (known issue 20).
+· Feel constants are simulated, not play-tested: the sandbox has no JDK and no device. All of them live in one `Constants` block, so tuning is a one-file change after the user plays it (R7).
+
+Next milestone: user's choice (R4 — wait for "go"). Candidates:
+· **A (recommended)** master M6 — head bob + footsteps + sprint FOV (Track B continues; the user's own schedule puts it 3 days out).
+· **B** master **M2b.5** — house asset integration, planned below, starts the moment the user's asset drop lands (one building first).
+· C master M10 (repo M7a) — 3 bots that patrol and shoot back; finally applies damage.
+· D master M16 + M17 (repo M2c) — industrial zone + military base.
+Notes for next model:
+· **Never write recoil, shake or bob into `FirstPersonCamera.yaw/pitch`.** All transient view offsets go through `apply(player, yawOffset, pitchOffset, rollDegrees)`; that is the whole mechanism behind the user's full-recovery requirement, and a single `yaw +=` in the wrong place silently breaks it.
+· **Keep the effect order** in `GameScreen.updateGameplay()`: `look → movement(base yaw) → recoil → shake → apply → weapons`. Reordering makes movement inherit the kick (the player drifts when firing) or makes the shot ray use last frame's aim twice.
+· One shot event only: `WeaponController.firedThisFrame()` + `getLastShotRecoil()`. Do not poll the trigger for effects, or reload and dry fire will kick the camera.
+· Pure-math classes stay libGDX-free where possible (`RecoilState` uses only `MathUtils`, `ScreenShake` likewise) so they can be ported and simulated: `/home/user/sim_m5.py` is a 1:1 Python port and prints peak climb, settle time and leftover offset per weapon per frame rate. Re-run it after changing any recoil constant.
+· `/home/user/check_java.py` (recreate it if the workspace was re-cloned) statically checks line limits, bracket balance, `com.brfps.*` imports, `Constants.*` fields, constructor arity, method existence **and arity** on our own types — 57 classes, 0 errors before this push. Run it before every push; CI is still the only real compiler (R18).
+· **This milestone broke CI once (run `34751085438`, fixed in the follow-up commit):**
+  `SpriteBatch.draw` has **no** rotated overload taking a `Texture` — the rotated quad is
+  `draw(TextureRegion, x, y, originX, originY, width, height, scaleX, scaleY, rotation)`
+  (10 arguments), and `x/y` is the lower-left corner with the origin relative to it, so
+  centring is `x = cx - w/2, originX = w/2`. `Assets` therefore exposes `whiteRegion()`
+  and `glowRegion()`; an arity check alone cannot catch this because a 10-argument
+  `Texture` overload also exists (`u, v, u2, v2`), so `/home/user/check_java.py` now
+  checks the first argument's type and the positional int/float pattern of that overload.
+· Verified against libGDX 1.12.1 sources through `gh api` (raw.githubusercontent and repo1.maven.org are both blocked in this sandbox; **codeload.github.com works**, so whole-repo tarballs are downloadable if you ever need more than single files): `AudioDevice.writeSamples(short[],int,int)` / `setVolume(float)`, `Audio.newAudioDevice(int,boolean)`, `Pixmap.drawPixel(int,int,int)` / `setBlending`, `SpriteBatch.draw(Texture,x,y,originX,originY,w,h,scaleX,scaleY,rotation)` (the 9-float overload), `Vector3.rotate(float,float,float,float)`, `MathUtils.clamp/random/sinDeg`.
+· `audio` is a new package: keep every placeholder SFX there so master M13 can replace the whole package with `SoundManager` in one diff.
+
+CI: `34751085438` (push) + `34751120329` (PR #4) — ❌ **red**: `incompatible types:
+  Texture cannot be converted to TextureRegion` (`ui/MuzzleFlash`, `ui/HitMarker`) — the
+  rotated `SpriteBatch.draw` overload takes a **TextureRegion**; fixed by `abf7238`
+  (`Assets.whiteRegion()/glowRegion()`), then `34751301753` (push) + `34751303036`
+  (PR #4) — ✅ **green**, 49 s, artifact `brfps-debug-apk` **8 624 100 bytes = 8.62 MB**
+  (byte-for-byte the M4 size: no image and no sound file was added). PR #4: OPEN.
+  Docs + the M2b.5 CC0 asset drop verified green in `34751622623` (push) +
+  `34751624652` (PR #4): artifact **8 766 987 bytes = 8.77 MB** (+536 KB of house GLBs,
+  nothing loads them yet).
+
+---
+
+## Plan: M2b.5 (master, new) — house asset integration — NOT STARTED, do not commit yet
+
+Written on 2026-09-13 at the user's request ("M5 ke baad M2b.5 plan karo — abhi commit
+nahi"). Track A insert between M9 and M16. Scope also lives in
+`SPEC.md → House Asset Integration — M2b.5 (planned)`; this is the working checklist.
+
+**Gate: three answers still missing from the user** — (1) file **format**, (2) **how many**
+buildings, (3) **source + licence** (the agent's starter pack answers all three for its own
+four files: `.glb`, 4 of 32, Kenney CC0 — see *Asset drop, part 1* below). Format decides
+the loader:
+
+| Format | Loads directly? | Work needed |
+|---|---|---|
+| `.glb` | ✅ yes | none — `gdx-gltf` 2.2.1 is already a pinned dependency. **But check `images[].uri`**: Kenney's GLB export points at an external `Textures/colormap.png` instead of embedding it |
+| `.gltf` | ✅ yes | none (keep the `.bin` and textures next to it) |
+| `.fbx` | ❌ no | `fbx-conv` → `.g3dj` (R24), or export from Blender |
+| `.obj` | ⚠️ static only | no animation, and libGDX needs `ObjLoader` (verify the 1.12.1 API first) |
+| `.blend` | ❌ no | export to `.glb` from Blender |
+
+Sandbox note for whoever runs it: `kenney.nl`, `quaternius.com` and `sketchfab.com` are
+**not reachable from the AI sandbox**, and Maven Central is blocked too; `github.com`,
+`api.github.com` and `codeload.github.com` are. A GitHub mirror of the Quaternius +
+Kenney free packs (`beep2bleep/FreeAssetsByKenneyNLandQuaternius`) was checked on
+2026-09-13: 919 `.fbx` + 748 `.blend` building models, but its only 59 `.glb` files are
+Kenney *Platformer Kit* blocks — so **GLB building packs are not sitting on GitHub**; the
+user's own download from kenney.nl / quaternius.com is the realistic source. If the drop
+arrives as `.fbx`, either convert with `fbx-conv` (R24's documented pipeline) or ask the
+user to re-export as `.glb` — do not add a new dependency to read FBX (R15).
+
+**Asset drop, part 1 — DONE by the agent on 2026-09-13 (this branch, assets only).**
+`kenney.nl` / `quaternius.com` / `sketchfab.com` are unreachable from the sandbox, but a
+GitHub mirror of the Kenney packs is not: **`assets/buildings/` now holds four CC0 houses
+from Kenney's *City Kit Suburban (2.0)*** (`house_small`, `house_medium`,
+`house_two_storey`, `shop` — renamed to `BuildingType` ids), 536 KB, each with a measured
+`info.txt`, plus `assets/buildings/README.md` with the licence text and the numbers below.
+So Phase 1 has a real GLB to chew on even before the user's own download lands; if the
+user's assets differ, they simply replace these folders. Three measured surprises, all
+exactly the risks the user listed:
+
+1. **The texture is NOT embedded** — every GLB declares `images[0].uri =
+   "Textures/colormap.png"`, so the PNG must stay in that subfolder (the ⚠️ case). It is
+   **one 512×512 atlas shared by the whole kit** (the four copies are byte-identical),
+   inside the R12 cap, and each building's UVs use a small sub-rectangle ⇒ at runtime one
+   texture can serve all 32 buildings, which is what makes batching/instancing possible.
+2. **The scale is nowhere near 1 unit = 1 m**: a house is 1.3 units wide. Cross-checked
+   against the same author's Roads kit (street light 0.67 units ≈ 5 m, cone 0.08 ≈ 0.7 m)
+   ⇒ **1 unit ≈ 0.14 m**, so ≈7.2× to reach human scale and then a further per-type factor
+   to hit the `BuildingType` footprints: `house_small` 0.64 (→ 6.0 × 3.4 × 4.2 m),
+   `house_medium` 0.64 (→ 6.0 × 3.8 × 4.8 m), `house_two_storey` 0.55 (→ 7.0 × 4.9 × 4.1 m),
+   `shop` 0.59 (→ 5.6 × 4.9 × 6.0 m). Starting numbers only — the 6 × 4 × 6 m debug
+   reference box decides.
+3. **Orientation unverified**: nodes carry no rotation, and our factory/collider treat
+   local +Z as the front. Must be eyeballed in Phase 1.
+
+Also measured: 770–2062 triangles and 988–3010 vertices per house (short indices are
+safe), one mesh / one primitive / one material each, no animation, no skinning, generator
+"UnityGLTF", `extensionsUsed: [KHR_texture_transform]`. The full kit is 41 GLBs (21
+building types + fences/paths/details, 2.6 MB) and the mirror also has Kenney's
+**Commercial**, **Industrial** and **Roads** packs — the Industrial one is the obvious
+source for master M16/M17. Budget note: 32 buildings × ~1 400 tris ≈ **45k triangles**,
+which alone would eat more than half of the 80k budget (R29) on top of the 6.3k the
+procedural island uses ⇒ Phase 2 needs the low-detail variants (8–26 KB, ~200 tris each)
+for distant buildings, or LOD (master M19).
+
+**Expected layout** (user's machine: `D:\brfps-assets\buildings\`; in-repo target
+`assets/buildings/<name>/<name>.glb` + `info.txt`) — already true for the four above:
+
+```
+assets/buildings/house_medium/house_medium.glb
+assets/buildings/house_medium/info.txt   ← Building, Source URL, Author, License,
+                                            Size, Texture, Triangles, Dimensions WxHxD,
+                                            Interior yes/no
+```
+
+`Dimensions` is the field that matters most: it is what the scale check compares against.
+
+**Phase 1 — ONE building (house_medium), one location, one screenshot.**
+1. Load with `Gltf.loadModel(Gdx.files.internal("buildings/house_medium/house_medium.glb"))`
+   — verify that exact call against the gdx-gltf 2.2.1 sources before using it (R10).
+2. Assume **1 unit = 1 m**; draw a **6 × 4 × 6 m debug reference box** next to the model
+   (`MeshKit` + the debug package, gated by `DEBUG_TOOLS_ENABLED`) and compare. 60 m tall
+   ⇒ scale 0.1; 0.6 m ⇒ scale 10. Put the factor in the layout JSON, never hardcoded.
+3. Check texture embedding: a `.glb` from Kenney/Quaternius/Sketchfab normally embeds it;
+   a `.gltf` does not — a separate PNG must sit in the same folder with the same base name.
+4. Check orientation: local **+Z must stay the front** (`BuildingType`/`BuildingCollider`
+   both assume it, rotated by `def.rotation`), otherwise every doorway faces sideways.
+5. Collision: keep the **existing solid boxes** from `BuildingCollider`/`ColliderBoxes`
+   sized by `BuildingType`. No interior collision in this milestone — that refinement
+   comes after master M8 (heightfields). If the art's footprint differs from the box,
+   scale the box, do not hand-place walls.
+6. Re-use the existing `buildings[]` coordinates in `assets/maps/island.layout` unchanged
+   for that one entry (data-only, R23/R42).
+7. `house_medium` is **not** a `BuildingType` id (the kit has `house_small`,
+   `house_two_storey`, `shop`, `hut`, `temple`, `warehouse`, `factory`, `barracks`), so
+   Phase 1 either maps that GLB onto `house_small` for the test or adds a 9th enum row +
+   layout type (a data change plus one row, R7/R23) — decide with the user, don't invent it.
+8. Deliverable: an **editor-view screenshot** (menu → EDITOR, `debug/screenshot.png`) with
+   the reference box visible, plus the DC/tri delta in the HUD.
+
+**Phase 2 — the other 31**, only after Phase 1 is signed off by the user.
+· Draw calls are the risk: 32 separate models = 32+ draw calls against a budget of 80
+  (R28) on top of the 9 a match already uses. Plan for **instancing per building type**
+  (`ModelInstance` sharing one `Model` + one `ModelBatch`) or a merged static mesh, and
+  record the measured number here before committing.
+· Keep the procedural `BuildingFactory` behind a constant (e.g. `USE_MODEL_BUILDINGS`) so
+  a missing model falls back to the generated geometry instead of an empty lot (R25).
+· Textures must be ≤ 512×512 POT (R12 / SPEC's 512 cap): re-pack anything bigger.
+· APK budget < 40 MB (8.6 MB today): CC0 low-poly GLBs are usually 50–500 KB each, so 32
+  buildings should land well inside, but measure and write the number into the budget table.
+
+**Definition of done:** the island's 32 placements render with real models, no building
+is floating/sunken/mis-scaled against its 6×4×6 reference, the player still collides with
+all of them (walk the town in first person), doorways still line up with the walkable
+gaps, draw calls stay under 60, and both an editor-view and a first-person screenshot are
+attached to the PR.

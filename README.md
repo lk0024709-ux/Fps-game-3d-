@@ -24,7 +24,11 @@ All dependency versions are pinned — no `+`, no `latest`.
 
 - `core/` — all gameplay code, platform independent (`com.brfps`)
 - `android/` — Android launcher, manifest, resources
-- `assets/` — models, textures, sounds, fonts (shared, served from `android/`)
+- `assets/` — maps, models, textures, sounds, fonts (shared, served from `android/`).
+  Everything the game renders today is generated in code, so `models/`, `textures/`,
+  `sounds/` and `ui/` are still empty; `maps/` holds the JSON layouts and
+  `buildings/` holds the CC0 house models waiting for M2b.5
+  (see `assets/buildings/README.md` for licence, scale and texture notes)
 
 ## Build
 
@@ -81,6 +85,18 @@ walkable, roofs are not climbable. The HUD shows a crosshair, `HP | AR | stance`
 ammo counter and, in debug builds, `FPS | DC | Tri`, your position and shot statistics.
 Details: `SPEC.md → First-Person Controls (master M3)` and `SPEC.md → Shooting
 (master M4)`.
+
+### Gun feel
+
+Holding the trigger makes the gun climb: the view kicks up by the weapon's recoil
+(pistol 1.2° per shot, up to 14° of total climb) with a left-right sway, the crosshair
+blooms open, a flash pops at the bottom of the screen, a short crack plays, and every
+impact flashes a hit marker over the crosshair. **Let go and the aim returns to exactly
+where you were pointing** — recoil here is full recovery (Free Fire style), never a
+permanent offset, so tapping is always accurate and spraying costs you the climb.
+Shake and a slight camera roll are proportional to the weapon, so a shotgun thumps and a
+pistol barely moves. The gun sound is a placeholder beep until master M13, and the flash
+moves onto the weapon model at master M20. Details: `SPEC.md → Game Feel (master M5)`.
 
 ## Debug / Editor View
 
