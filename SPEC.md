@@ -344,8 +344,9 @@ startup on one daemon thread — no sound file ships. Measured in CI: the M5 art
 screen stays at 9 draw calls / ≈6.3k triangles in a match.
 
 M2b.5 pre-drop cost (assets on disk, nothing loads them yet): **+536 KB** of CC0 house
-GLBs in `assets/buildings/` (4 models + 4 copies of one 11.5 KB shared 512×512 atlas),
-so the next APK is expected at ≈8.7 MB — still far inside the 40 MB cap. Phase 2 must
+GLBs in `assets/buildings/` (4 models + 4 copies of one 11.5 KB shared 512×512 atlas).
+Measured in CI (run `34751622623`): the artifact went 8 624 100 → **8 766 987 bytes
+(8.77 MB)**, still far inside the 40 MB cap. Phase 2 must
 deduplicate the atlas at runtime (one texture for all buildings) and watch the triangle
 budget: 32 × ≈1 400 tris ≈ 45k against the 80k limit (R29).
 

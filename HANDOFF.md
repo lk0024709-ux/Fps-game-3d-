@@ -447,6 +447,9 @@ CI: `34751085438` (push) + `34751120329` (PR #4) — ❌ **red**: `incompatible 
   (`Assets.whiteRegion()/glowRegion()`), then `34751301753` (push) + `34751303036`
   (PR #4) — ✅ **green**, 49 s, artifact `brfps-debug-apk` **8 624 100 bytes = 8.62 MB**
   (byte-for-byte the M4 size: no image and no sound file was added). PR #4: OPEN.
+  Docs + the M2b.5 CC0 asset drop verified green in `34751622623` (push) +
+  `34751624652` (PR #4): artifact **8 766 987 bytes = 8.77 MB** (+536 KB of house GLBs,
+  nothing loads them yet).
 
 ---
 
